@@ -119,14 +119,27 @@ function AppProvider({ children }) {
     GD.STATS = { [y]: a.stats, [y - 1]: b.stats };
   }, [hoy]);
 
+  // Memoria de meses ya visitados: volver a un mes es instantáneo
+  // (se enseña lo recordado y se refresca por detrás).
+  const mesCacheRef = useRef({});
   const loadMonth = useCallback(async (y, m0) => {
     setCalY(y); setCalM(m0);
+    const clave = y + '-' + m0;
+    const recordado = mesCacheRef.current[clave];
+    if (recordado) {
+      setSchedule(recordado.guardias);
+      setPublished(recordado.publicado);
+    } else {
+      setSchedule({}); // mes nuevo: cuadrícula limpia mientras llega
+    }
     try {
       const plan = await API.plan(y, m0 + 1);
-      setSchedule(plan.guardias || {});
-      setPublished(plan.estado === 'publicado');
+      const datos = { guardias: plan.guardias || {}, publicado: plan.estado === 'publicado' };
+      mesCacheRef.current[clave] = datos;
+      setSchedule(datos.guardias);
+      setPublished(datos.publicado);
     } catch (e) {
-      setSchedule({}); setPublished(false);
+      if (!recordado) { setSchedule({}); setPublished(false); }
     }
   }, []);
 
@@ -210,8 +223,9 @@ function AppProvider({ children }) {
   const accion = useCallback(async (fn, okMsg, kind = 'ok') => {
     try {
       await fn();
-      await refrescar();
       if (okMsg) showToast(okMsg, kind);
+      // La sincronización va en segundo plano: la interfaz responde ya.
+      refrescar().catch(() => {});
       return true;
     } catch (e) {
       showToast(e.message, 'err');
