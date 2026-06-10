@@ -43,14 +43,27 @@ router.get(
               count(*) FILTER (WHERE EXTRACT(ISODOW FROM s.fecha) = 5)::int AS vi,
               count(*) FILTER (WHERE EXTRACT(ISODOW FROM s.fecha) = 6)::int AS sa,
               count(*) FILTER (WHERE EXTRACT(ISODOW FROM s.fecha) = 7)::int AS do_
-         FROM shifts s
-         JOIN month_plans p ON p.id = s.plan_id AND p.estado = 'publicado'
+         FROM (
+           SELECT s2.user_id, s2.fecha FROM shifts s2
+             JOIN month_plans p ON p.id = s2.plan_id AND p.estado = 'publicado'
+           UNION ALL
+           SELECT ge.user_id, ge.fecha FROM guardias_externas ge
+         ) s
         WHERE s.fecha >= make_date($1, 1, 1) AND s.fecha < make_date($1 + 1, 1, 1)
         GROUP BY s.user_id`,
       [anio],
     );
     const statByUser = Object.fromEntries(statRows.map((s) => [s.user_id, s]));
     const conteoMes = await conteoGuardiasMes({ query }, anio, mes);
+    // las externas del mes también suman en el contador mensual
+    const { rows: extMes } = await query(
+      `SELECT user_id, count(*)::int AS n FROM guardias_externas
+        WHERE fecha >= make_date($1, $2, 1)
+          AND fecha < (make_date($1, $2, 1) + INTERVAL '1 month')
+        GROUP BY user_id`,
+      [anio, mes],
+    );
+    for (const e of extMes) conteoMes[e.user_id] = (conteoMes[e.user_id] || 0) + e.n;
 
     const stats = {};
     for (const u of usuarios) {

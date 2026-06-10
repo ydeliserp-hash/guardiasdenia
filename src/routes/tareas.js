@@ -77,6 +77,24 @@ router.get(
       recordatorios += 1;
     }
 
+    // ---- 1b) Recordatorio de guardia EXTERNA (mañana) ----
+    const { rows: externasManana } = await query(
+      `SELECT ge.fecha, ge.user_id, ge.lugar
+         FROM guardias_externas ge
+         JOIN users u ON u.id = ge.user_id AND u.activo
+        WHERE ge.fecha = CURRENT_DATE + 1`,
+    );
+    for (const g of externasManana) {
+      if (await yaAvisadoHoy(g.user_id, { tituloPrefijo: 'Recordatorio de guardia' })) continue;
+      const cuerpo = `Mañana (${shortLabel(toISODate(g.fecha))}) tienes guardia externa${g.lugar ? ' en ' + g.lugar : ''}.`;
+      await crearNotificacion(db, {
+        userId: g.user_id, tipo: 'recordatorio', icono: 'bell',
+        titulo: 'Recordatorio de guardia', cuerpo,
+      });
+      await enviarPush(g.user_id, { titulo: 'Recordatorio de guardia', cuerpo, url: '/' });
+      recordatorios += 1;
+    }
+
     // ---- 2) Solicitudes paradas >48 h ----
     const { rows: paradas } = await query(
       `SELECT cr.id, cr.estado, cr.a_user_id, de.nombre AS de_nombre, a.nombre AS a_nombre

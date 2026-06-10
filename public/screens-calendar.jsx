@@ -380,3 +380,162 @@ function CalendarScreen() {
   );
 }
 window.CalendarScreen = CalendarScreen;
+
+/* ============================================================
+   Guardias externas — rotatorios en otros hospitales.
+   Cada residente apunta las suyas; cuentan en Vi/Sa/Do.
+   ============================================================ */
+function ExternasScreen() {
+  const { current, isStaff, showToast } = useApp();
+  const [y, setY] = useState(GD.YEAR);
+  const [m, setM] = useState(GD.MONTH); // 0-indexado
+  const [items, setItems] = useState(null); // null = cargando
+  const [abierta, setAbierta] = useState(false);
+  const [fecha, setFecha] = useState(API.iso(GD.YEAR, GD.MONTH, GD.TODAY));
+  const [lugar, setLugar] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [aBorrar, setABorrar] = useState(null);
+
+  function cargar(yy = y, mm = m) {
+    setItems(null);
+    API.guardiasExternas(yy, mm + 1)
+      .then(setItems)
+      .catch((e) => { setItems([]); showToast(e.message, 'err'); });
+  }
+  useEffect(() => { cargar(y, m); }, [y, m]); // eslint-disable-line
+
+  const prev = () => { if (m === 0) { setM(11); setY(y - 1); } else setM(m - 1); };
+  const next = () => { if (m === 11) { setM(0); setY(y + 1); } else setM(m + 1); };
+
+  // deslizar para cambiar de mes (como el calendario)
+  const tRef = useRef(null);
+  const onTS = (e) => { const t = e.touches[0]; tRef.current = { x: t.clientX, y: t.clientY }; };
+  const onTE = (e) => {
+    const i = tRef.current; tRef.current = null;
+    if (!i) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - i.x, dy = t.clientY - i.y;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { if (dx < 0) next(); else prev(); }
+  };
+
+  const etiqueta = (iso) => {
+    const d = new Date(iso + 'T00:00:00');
+    const dow = (d.getDay() + 6) % 7;
+    return { dow: GD.DOW[dow], dia: d.getDate(), finde: dow >= 4 };
+  };
+
+  async function guardar() {
+    if (!fecha) { showToast('Elige la fecha', 'warn'); return; }
+    setGuardando(true);
+    try {
+      await API.crearGuardiaExterna({ fecha, lugar: lugar.trim() || undefined });
+      setAbierta(false); setLugar('');
+      showToast('Guardia externa apuntada');
+      const d = new Date(fecha + 'T00:00:00');
+      if (d.getFullYear() === y && d.getMonth() === m) cargar();
+      else { setY(d.getFullYear()); setM(d.getMonth()); }
+    } catch (e) {
+      showToast(e.message, 'err');
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function borrar() {
+    try {
+      const r = await API.borrarGuardiaExterna(aBorrar.id);
+      showToast(r.mensaje || 'Eliminada', 'warn');
+      setABorrar(null);
+      cargar();
+    } catch (e) {
+      showToast(e.message, 'err');
+    }
+  }
+
+  return (
+    <div className="page-pad" onTouchStart={onTS} onTouchEnd={onTE}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <h2 className="page-title" style={{ flex: 1 }}>Guardias externas</h2>
+        {current.guardias && (
+          <button className="btn btn-primary btn-sm"
+            onClick={() => { setFecha(API.iso(y, m, GD.TODAY)); setAbierta(true); }}>
+            <Icon name="plus" size={16} /> Apuntar
+          </button>
+        )}
+      </div>
+      <p className="page-sub">Guardias hechas en rotatorios fuera del hospital. Cuentan para tus límites Vi/Sá/Do.</p>
+
+      <div className="cal-head">
+        <div className="cal-month">{GD.MONTHS[m]} {y}</div>
+        <div className="cal-nav">
+          <button className="cal-navbtn" onClick={prev}><Icon name="chevL" size={18} /></button>
+          <button className="cal-navbtn" onClick={next}><Icon name="chevR" size={18} /></button>
+        </div>
+      </div>
+
+      {items === null && <div className="empty">Cargando…</div>}
+      {items && items.length === 0 && (
+        <div className="empty">No hay guardias externas este mes.</div>
+      )}
+      {items && items.length > 0 && (
+        <div className="card" style={{ padding: '4px 16px' }}>
+          {items.map((g) => {
+            const u = GD.byId[g.user_id] || { id: g.user_id, nombre: 'Residente', ini: '·', color: null };
+            const et = etiqueta(g.fecha);
+            const mia = g.user_id === current.id;
+            return (
+              <div key={g.id} className="row">
+                <div style={{
+                  minWidth: 44, textAlign: 'center', borderRadius: 12, padding: '4px 6px',
+                  background: et.finde ? 'var(--amber-bg)' : 'var(--surface-3)',
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>{et.dow}</div>
+                  <div style={{ fontSize: 17, fontWeight: 800 }}>{et.dia}</div>
+                </div>
+                <Avatar user={u} size={34} />
+                <div className="row-main">
+                  <div className="row-title">{u.nombre}</div>
+                  <div className="row-meta">{g.lugar || 'Hospital externo'}</div>
+                </div>
+                {(mia || isStaff) && (
+                  <button className="iconbtn" onClick={() => setABorrar(g)} aria-label="Eliminar">
+                    <Icon name="close" size={18} style={{ color: 'var(--red-text)' }} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Apuntar guardia externa */}
+      <Sheet open={abierta} onClose={() => setAbierta(false)}
+        title="Apuntar guardia externa"
+        sub="Solo para guardias hechas fuera del hospital durante un rotatorio. Contará en tus estadísticas y límites.">
+        <div className="field">
+          <label className="field-label">Fecha</label>
+          <input className="input" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+        </div>
+        <div className="field">
+          <label className="field-label">Hospital / lugar <span style={{ color: 'var(--text-faint)', fontWeight: 500 }}>(opcional)</span></label>
+          <input className="input" value={lugar} maxLength={80}
+            onChange={(e) => setLugar(e.target.value)} placeholder="Ej.: Hospital La Fe (Valencia)" />
+        </div>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} disabled={guardando} onClick={guardar}>
+          <Icon name="check" size={17} /> {guardando ? 'Guardando…' : 'Aceptar'}
+        </button>
+      </Sheet>
+
+      {/* Confirmar borrado */}
+      <Dialog open={!!aBorrar} onClose={() => setABorrar(null)}>
+        {aBorrar && (<>
+          <h3 className="dlg-title">¿Eliminar esta guardia externa?</h3>
+          <p className="dlg-text">{etiqueta(aBorrar.fecha).dow} {etiqueta(aBorrar.fecha).dia} · {aBorrar.lugar || 'Hospital externo'}. Dejará de contar en las estadísticas.</p>
+          <button className="btn btn-danger" onClick={borrar}>Sí, eliminar</button>
+          <button className="btn btn-ghost" style={{ marginTop: 6 }} onClick={() => setABorrar(null)}>Cancelar</button>
+        </>)}
+      </Dialog>
+    </div>
+  );
+}
+window.ExternasScreen = ExternasScreen;

@@ -237,21 +237,40 @@ CREATE TABLE IF NOT EXISTS push_config (
   creada_en   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ============================================================================
+-- 004 — Guardias externas (rotatorios en otros hospitales)
+-- Cada residente apunta SUS guardias hechas fuera. Cuentan para las
+-- estadísticas y límites Vi/Sa/Do y para la regla de días consecutivos,
+-- pero no pertenecen a ninguna planilla ni admiten cambios/cesiones.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS guardias_externas (
+  id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  fecha     DATE NOT NULL,
+  lugar     TEXT CHECK (lugar IS NULL OR char_length(lugar) <= 80),
+  creada_en TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, fecha)  -- una guardia externa por residente y día
+);
+
+CREATE INDEX IF NOT EXISTS idx_gext_fecha ON guardias_externas (fecha);
+CREATE INDEX IF NOT EXISTS idx_gext_user  ON guardias_externas (user_id);
+
 -- ----------------------------------------------------------------------------
 -- 2) DATOS DE EJEMPLO
 -- ----------------------------------------------------------------------------
 TRUNCATE notifications, audit_log, shifts, change_requests, year_stats, month_plans, users RESTART IDENTITY CASCADE;
 
 -- Usuarios (password_hash bcrypt embebido)
-INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('carmen', 'Carmen Bisbal', 'Dra. Carmen Bisbal', 'CB', '21456789X', '$2a$10$9jXydeEUiAyRgk19g8l6eOTi4YcswMz2FeBCQnb41gBKSSTiBZxkm', 'tutor', 'Tutora', 'lavanda', FALSE, TRUE, TRUE, NULL);
-INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('marta', 'Marta Espí', 'Marta Espí', 'ME', '48721903K', '$2a$10$9jXydeEUiAyRgk19g8l6eOTi4YcswMz2FeBCQnb41gBKSSTiBZxkm', 'r4', 'R4', 'cielo', TRUE, TRUE, TRUE, NULL);
-INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('javier', 'Javier Morand', 'Javier Morand', 'JM', '20098451T', '$2a$10$9jXydeEUiAyRgk19g8l6eOTi4YcswMz2FeBCQnb41gBKSSTiBZxkm', 'r4', 'R4', 'salvia', TRUE, TRUE, TRUE, NULL);
-INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('lucia', 'Lucía Sendra', 'Lucía Sendra', 'LS', '53110874P', '$2a$10$9jXydeEUiAyRgk19g8l6eOTi4YcswMz2FeBCQnb41gBKSSTiBZxkm', 'residente', 'R3', 'rosa', TRUE, TRUE, TRUE, NULL);
-INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('hugo', 'Hugo Ferrer', 'Hugo Ferrer', 'HF', '44903217M', '$2a$10$9jXydeEUiAyRgk19g8l6eOTi4YcswMz2FeBCQnb41gBKSSTiBZxkm', 'residente', 'R2', 'melocoton', TRUE, TRUE, TRUE, NULL);
-INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('aitana', 'Aitana Roselló', 'Aitana Roselló', 'AR', '49872013D', '$2a$10$9jXydeEUiAyRgk19g8l6eOTi4YcswMz2FeBCQnb41gBKSSTiBZxkm', 'residente', 'R2', 'amarillo', TRUE, TRUE, TRUE, NULL);
-INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('pablo', 'Pablo Mengual', 'Pablo Mengual', 'PM', '26540918L', '$2a$10$9jXydeEUiAyRgk19g8l6eOTi4YcswMz2FeBCQnb41gBKSSTiBZxkm', 'residente', 'R1', 'menta', TRUE, TRUE, TRUE, NULL);
-INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('nerea', 'Nerea Vidal', 'Nerea Vidal', 'NV', '51230496G', '$2a$10$9jXydeEUiAyRgk19g8l6eOTi4YcswMz2FeBCQnb41gBKSSTiBZxkm', 'residente', 'R1', 'bebe', TRUE, TRUE, TRUE, NULL);
-INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('tomas', 'Tomás Gilabert', 'Dr. Tomás Gilabert', 'TG', '30019283F', '$2a$10$9jXydeEUiAyRgk19g8l6eOTi4YcswMz2FeBCQnb41gBKSSTiBZxkm', 'externo', 'Externo', 'coral', TRUE, FALSE, TRUE, NULL);
+INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('carmen', 'Carmen Bisbal', 'Dra. Carmen Bisbal', 'CB', '21456789X', '$2a$10$HIjPNdFwGi1n4J22YQBHNuJft.Ib9Ekb6WmRncCkAv5vJ3jnTDmnW', 'tutor', 'Tutora', 'lavanda', FALSE, TRUE, TRUE, NULL);
+INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('marta', 'Marta Espí', 'Marta Espí', 'ME', '48721903K', '$2a$10$HIjPNdFwGi1n4J22YQBHNuJft.Ib9Ekb6WmRncCkAv5vJ3jnTDmnW', 'r4', 'R4', 'cielo', TRUE, TRUE, TRUE, NULL);
+INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('javier', 'Javier Morand', 'Javier Morand', 'JM', '20098451T', '$2a$10$HIjPNdFwGi1n4J22YQBHNuJft.Ib9Ekb6WmRncCkAv5vJ3jnTDmnW', 'r4', 'R4', 'salvia', TRUE, TRUE, TRUE, NULL);
+INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('lucia', 'Lucía Sendra', 'Lucía Sendra', 'LS', '53110874P', '$2a$10$HIjPNdFwGi1n4J22YQBHNuJft.Ib9Ekb6WmRncCkAv5vJ3jnTDmnW', 'residente', 'R3', 'rosa', TRUE, TRUE, TRUE, NULL);
+INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('hugo', 'Hugo Ferrer', 'Hugo Ferrer', 'HF', '44903217M', '$2a$10$HIjPNdFwGi1n4J22YQBHNuJft.Ib9Ekb6WmRncCkAv5vJ3jnTDmnW', 'residente', 'R2', 'melocoton', TRUE, TRUE, TRUE, NULL);
+INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('aitana', 'Aitana Roselló', 'Aitana Roselló', 'AR', '49872013D', '$2a$10$HIjPNdFwGi1n4J22YQBHNuJft.Ib9Ekb6WmRncCkAv5vJ3jnTDmnW', 'residente', 'R2', 'amarillo', TRUE, TRUE, TRUE, NULL);
+INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('pablo', 'Pablo Mengual', 'Pablo Mengual', 'PM', '26540918L', '$2a$10$HIjPNdFwGi1n4J22YQBHNuJft.Ib9Ekb6WmRncCkAv5vJ3jnTDmnW', 'residente', 'R1', 'menta', TRUE, TRUE, TRUE, NULL);
+INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('nerea', 'Nerea Vidal', 'Nerea Vidal', 'NV', '51230496G', '$2a$10$HIjPNdFwGi1n4J22YQBHNuJft.Ib9Ekb6WmRncCkAv5vJ3jnTDmnW', 'residente', 'R1', 'bebe', TRUE, TRUE, TRUE, NULL);
+INSERT INTO users (id, nombre, trato, iniciales, dni, password_hash, role, anio, color, hace_guardias, aplica_limites, activo, activation_code) VALUES ('tomas', 'Tomás Gilabert', 'Dr. Tomás Gilabert', 'TG', '30019283F', '$2a$10$HIjPNdFwGi1n4J22YQBHNuJft.Ib9Ekb6WmRncCkAv5vJ3jnTDmnW', 'externo', 'Externo', 'coral', TRUE, FALSE, TRUE, NULL);
 
 INSERT INTO audit_log (entidad, entidad_id, accion, actor_id, estado_nuevo, detalle, creado_en) VALUES ('usuario', 'carmen', 'alta_usuario', 'carmen', 'activo', '{"nombre":"Carmen Bisbal","role":"tutor","color":"lavanda"}'::jsonb, now() - interval '240 hours');
 INSERT INTO audit_log (entidad, entidad_id, accion, actor_id, estado_nuevo, detalle, creado_en) VALUES ('usuario', 'marta', 'alta_usuario', 'carmen', 'activo', '{"nombre":"Marta Espí","role":"r4","color":"cielo"}'::jsonb, now() - interval '240 hours');

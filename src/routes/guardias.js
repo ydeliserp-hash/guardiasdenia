@@ -95,7 +95,9 @@ router.put(
       const diaSiguiente = addDays(fecha, 1);
       for (const uid of userIds.filter((id) => !antes.includes(id))) {
         const { rows: vecinos } = await client.query(
-          'SELECT fecha FROM shifts WHERE user_id = $1 AND fecha = ANY($2::date[])',
+          `SELECT fecha FROM shifts WHERE user_id = $1 AND fecha = ANY($2::date[])
+           UNION ALL
+           SELECT fecha FROM guardias_externas WHERE user_id = $1 AND fecha = ANY($2::date[])`,
           [uid, [diaAnterior, diaSiguiente]],
         );
         if (vecinos.length) {

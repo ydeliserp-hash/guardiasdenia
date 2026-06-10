@@ -294,6 +294,7 @@ function BottomNav() {
     { id: 'profile', label: 'Perfil', icon: 'user' },
   ];
   if (isStaff) items.push({ id: 'admin', label: 'Admin', icon: 'shield' });
+  items.push({ id: 'externas', label: 'Externas', icon: 'moon' });
   const active = ['notis'].includes(screen) ? null : screen;
   return (
     <nav className="botnav">
@@ -369,6 +370,7 @@ function ScreenBody() {
     case 'admin': return <AdminScreen />;
     case 'notis': return <NotificationsScreen />;
     case 'historial': return <HistorialScreen />;
+    case 'externas': return <ExternasScreen />;
     default: return <CalendarScreen />;
   }
 }
@@ -439,6 +441,7 @@ function DeskRail() {
     { id: 'profile', label: 'Perfil', icon: 'user' },
   ];
   if (isStaff) items.push({ id: 'admin', label: 'Administración', icon: 'shield' });
+  items.push({ id: 'externas', label: 'Guardias externas', icon: 'moon' });
   return (
     <aside className="dk-rail">
       <div className="dk-brand">

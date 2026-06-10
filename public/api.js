@@ -77,6 +77,11 @@
     publicarPlan: (anio, mes1) => call('/planes/' + anio + '/' + mes1 + '/publicar', { method: 'POST', body: {} }),
     borradorPlan: (anio, mes1) => call('/planes/' + anio + '/' + mes1 + '/borrador', { method: 'POST', body: {} }),
     vaciarMes: (anio, mes1) => call('/planes/' + anio + '/' + mes1 + '/vaciar', { method: 'POST', body: {} }),
+
+    // --- Guardias externas (rotatorios) ---
+    guardiasExternas: (anio, mes1) => call('/guardias-externas?anio=' + anio + '&mes=' + mes1),
+    crearGuardiaExterna: (body) => call('/guardias-externas', { method: 'POST', body }),
+    borrarGuardiaExterna: (id) => call('/guardias-externas/' + id, { method: 'DELETE' }),
     altaUsuario: (body) => call('/usuarios', { method: 'POST', body }),
     editarUsuario: (id, body) => call('/usuarios/' + id, { method: 'PATCH', body }),
     bajaUsuario: (id) => call('/usuarios/' + id, { method: 'DELETE' }),

@@ -35,14 +35,18 @@ const COL = { vi: 'vi', sa: 'sa', do: 'do_' }; // mapeo clave → columna
 async function contarAnual(client, userId, anio) {
   const { rows } = await client.query(
     `SELECT count(*)::int AS guardias_anio,
-            count(*) FILTER (WHERE EXTRACT(ISODOW FROM s.fecha) = 5)::int AS vi,
-            count(*) FILTER (WHERE EXTRACT(ISODOW FROM s.fecha) = 6)::int AS sa,
-            count(*) FILTER (WHERE EXTRACT(ISODOW FROM s.fecha) = 7)::int AS do_
-       FROM shifts s
-       JOIN month_plans p ON p.id = s.plan_id AND p.estado = 'publicado'
-      WHERE s.user_id = $1
-        AND s.fecha >= make_date($2, 1, 1)
-        AND s.fecha <  make_date($2 + 1, 1, 1)`,
+            count(*) FILTER (WHERE EXTRACT(ISODOW FROM t.fecha) = 5)::int AS vi,
+            count(*) FILTER (WHERE EXTRACT(ISODOW FROM t.fecha) = 6)::int AS sa,
+            count(*) FILTER (WHERE EXTRACT(ISODOW FROM t.fecha) = 7)::int AS do_
+       FROM (
+         SELECT s.fecha FROM shifts s
+           JOIN month_plans p ON p.id = s.plan_id AND p.estado = 'publicado'
+          WHERE s.user_id = $1
+         UNION ALL
+         SELECT ge.fecha FROM guardias_externas ge WHERE ge.user_id = $1
+       ) t
+      WHERE t.fecha >= make_date($2, 1, 1)
+        AND t.fecha <  make_date($2 + 1, 1, 1)`,
     [userId, anio],
   );
   return rows[0] || { guardias_anio: 0, vi: 0, sa: 0, do_: 0 };
@@ -63,7 +67,9 @@ async function bloquearConsecutivos(client, userId, recibe, entrega = null) {
   const prev = addDays(recibe, -1);
   const next = addDays(recibe, 1);
   const { rows } = await client.query(
-    'SELECT fecha FROM shifts WHERE user_id = $1 AND fecha = ANY($2::date[])',
+    `SELECT fecha FROM shifts WHERE user_id = $1 AND fecha = ANY($2::date[])
+     UNION ALL
+     SELECT fecha FROM guardias_externas WHERE user_id = $1 AND fecha = ANY($2::date[])`,
     [userId, [prev, recibe, next]],
   );
   const tiene = new Set(rows.map((r) => toISODate(r.fecha)));

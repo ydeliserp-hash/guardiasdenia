@@ -63,13 +63,17 @@ router.get(
     // Sus guardias: desde hace 2 meses, solo planes publicados.
     const desde = addDays(toISODate(new Date()), -62);
     const { rows: guardias } = await query(
-      `SELECT s.id, s.fecha,
+      `SELECT s.id, s.fecha, FALSE AS externa, NULL AS lugar,
               (SELECT u2.nombre FROM shifts s2 JOIN users u2 ON u2.id = s2.user_id
                 WHERE s2.fecha = s.fecha AND s2.user_id <> s.user_id LIMIT 1) AS companero
          FROM shifts s
          JOIN month_plans p ON p.id = s.plan_id AND p.estado = 'publicado'
         WHERE s.user_id = $1 AND s.fecha >= $2
-        ORDER BY s.fecha`,
+       UNION ALL
+       SELECT ge.id, ge.fecha, TRUE AS externa, ge.lugar, NULL AS companero
+         FROM guardias_externas ge
+        WHERE ge.user_id = $1 AND ge.fecha >= $2
+        ORDER BY fecha`,
       [uid, desde],
     );
 
@@ -94,7 +98,7 @@ router.get(
         `DTSTAMP:${ahora}`,
         `DTSTART;VALUE=DATE:${fmt(fecha)}`,
         `DTEND;VALUE=DATE:${fmt(addDays(fecha, 1))}`,
-        `SUMMARY:Guardia${g.companero ? ' (con ' + g.companero + ')' : ''}`,
+        `SUMMARY:${g.externa ? 'Guardia externa' + (g.lugar ? ' · ' + g.lugar : '') : 'Guardia' + (g.companero ? ' (con ' + g.companero + ')' : '')}`,
         'DESCRIPTION:Guardia de residentes · Hospital Universitario de Dénia',
         'END:VEVENT',
       );
