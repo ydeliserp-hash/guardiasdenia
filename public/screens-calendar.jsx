@@ -12,6 +12,7 @@ function DayCell({ day, ids, dow, isToday, treatment, onClick }) {
   const ub = ids[1] ? (GD.byId[ids[1]] || desconocido(ids[1])) : null;
   const cls = ['cell'];
   if (we) cls.push('we');
+  if (ub && treatment === 'fichas') cls.push('fichas-mode');
   if (isToday) cls.push('today');
   if (!ua) cls.push('empty-day');
 

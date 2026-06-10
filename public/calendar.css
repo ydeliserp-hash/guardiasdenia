@@ -213,3 +213,6 @@
 .ficha-top { top: 17px; }
 .ficha-bot { bottom: 3px; }
 .app-root.mobile-full .ficha { font-size: 12px; }
+
+/* Modo fichas: el número del día va sobre el fondo de la celda → color del tema */
+.cell.fichas-mode .daynum { color: var(--text); }
