@@ -1,29 +1,34 @@
 'use strict';
 
 const { Pool, types } = require('pg');
+const { parse } = require('pg-connection-string');
 const env = require('./env');
 
 // Devolver las columnas DATE (OID 1082) como string 'YYYY-MM-DD' tal cual,
 // sin convertir a Date (evita desfases de zona horaria al comparar días).
 types.setTypeParser(1082, (val) => val);
 
-// Opciones comunes: SSL (gestionadas como Supabase lo exigen) y tamaño de pool
-// (en serverless conviene max=1 para no agotar conexiones del pooler).
-const comun = {
-  ...(env.pgSsl ? { ssl: { rejectUnauthorized: false } } : {}),
-  ...(env.pgPoolMax ? { max: env.pgPoolMax } : {}),
-};
-
-const pool = env.databaseUrl
-  ? new Pool({ connectionString: env.databaseUrl, ...comun })
-  : new Pool({
+// Parseamos DATABASE_URL nosotros mismos: si se pasa connectionString a pg,
+// un `?sslmode=require` en la URL tiene precedencia sobre la opción `ssl`
+// explícita y fuerza la verificación estricta del certificado, que falla con
+// el pooler de Supabase ("self-signed certificate in certificate chain").
+const base = env.databaseUrl
+  ? parse(env.databaseUrl)
+  : {
       host: env.pg.host,
       port: env.pg.port,
       user: env.pg.user,
       password: env.pg.password,
       database: env.pg.database,
-      ...comun,
-    });
+    };
+
+const pool = new Pool({
+  ...base,
+  // SSL al final para que gane a lo que venga de la URL.
+  ssl: env.pgSsl ? { rejectUnauthorized: false } : false,
+  // En serverless conviene max=1 para no agotar conexiones del pooler.
+  ...(env.pgPoolMax ? { max: env.pgPoolMax } : {}),
+});
 
 pool.on('error', (err) => {
   // Errores de clientes inactivos en el pool: log y continuar.
