@@ -383,18 +383,22 @@ window.CalendarScreen = CalendarScreen;
 
 /* ============================================================
    Guardias externas — rotatorios en otros hospitales.
-   Cada residente apunta las suyas; cuentan en Vi/Sa/Do.
+   Formato calendario; SOLO el tutor apunta/borra. Cuentan en Vi/Sa/Do.
    ============================================================ */
 function ExternasScreen() {
-  const { current, isStaff, showToast } = useApp();
+  const { isTutor, users, calTreatment, showToast } = useApp();
   const [y, setY] = useState(GD.YEAR);
   const [m, setM] = useState(GD.MONTH); // 0-indexado
   const [items, setItems] = useState(null); // null = cargando
-  const [abierta, setAbierta] = useState(false);
-  const [fecha, setFecha] = useState(API.iso(GD.YEAR, GD.MONTH, GD.TODAY));
-  const [lugar, setLugar] = useState('');
+  const [diaAbierto, setDiaAbierto] = useState(null); // número de día
+  const [alta, setAlta] = useState(false);
+  const [fFecha, setFFecha] = useState(API.iso(GD.YEAR, GD.MONTH, GD.TODAY));
+  const [fResi, setFResi] = useState(null);
+  const [fLugar, setFLugar] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [aBorrar, setABorrar] = useState(null);
+
+  const treat = ['diagonal', 'fichas', 'split'].includes(calTreatment) ? calTreatment : 'diagonal';
 
   function cargar(yy = y, mm = m) {
     setItems(null);
@@ -407,7 +411,7 @@ function ExternasScreen() {
   const prev = () => { if (m === 0) { setM(11); setY(y - 1); } else setM(m - 1); };
   const next = () => { if (m === 11) { setM(0); setY(y + 1); } else setM(m + 1); };
 
-  // deslizar para cambiar de mes (como el calendario)
+  // deslizar para cambiar de mes
   const tRef = useRef(null);
   const onTS = (e) => { const t = e.touches[0]; tRef.current = { x: t.clientX, y: t.clientY }; };
   const onTE = (e) => {
@@ -418,20 +422,57 @@ function ExternasScreen() {
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { if (dx < 0) next(); else prev(); }
   };
 
-  const etiqueta = (iso) => {
-    const d = new Date(iso + 'T00:00:00');
-    const dow = (d.getDay() + 6) % 7;
-    return { dow: GD.DOW[dow], dia: d.getDate(), finde: dow >= 4 };
-  };
+  // mapa día → [user_id, ...] para pintar la cuadrícula
+  const porDia = useMemo(() => {
+    const mapa = {};
+    for (const g of (items || [])) {
+      const d = Number(g.fecha.slice(8, 10));
+      (mapa[d] = mapa[d] || []).push(g.user_id);
+    }
+    return mapa;
+  }, [items]);
+
+  // cuadrícula del mes (mismo cálculo que el calendario principal)
+  const first = new Date(y, m, 1);
+  const lead = (first.getDay() + 6) % 7;
+  const daysIn = new Date(y, m + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < lead; i++) cells.push(null);
+  for (let d = 1; d <= daysIn; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const dowFor = (d) => (new Date(y, m, d).getDay() + 6) % 7;
+  const fechaLabel = (d) => `${GD.DOW[dowFor(d)]} ${d} ${GD.MONTHS[m]}`;
+
+  // residentes presentes este mes (leyenda)
+  const presentes = useMemo(() => {
+    const s = new Set();
+    (items || []).forEach((g) => s.add(g.user_id));
+    return GD.USERS.filter((u) => s.has(u.id));
+  }, [items]);
+  const cuentaMes = (id) => (items || []).filter((g) => g.user_id === id).length;
+
+  const delDia = (d) => (items || []).filter((g) => Number(g.fecha.slice(8, 10)) === d);
+
+  // elegibles para el alta (activos que hacen guardias)
+  const elegibles = users.filter((u) => u.guardias);
+
+  function abrirAlta(dia = null) {
+    setFResi(null); setFLugar('');
+    setFFecha(dia ? API.iso(y, m, dia) : API.iso(y, m, GD.TODAY));
+    setDiaAbierto(null);
+    setAlta(true);
+  }
 
   async function guardar() {
-    if (!fecha) { showToast('Elige la fecha', 'warn'); return; }
+    if (!fResi) { showToast('Elige el residente', 'warn'); return; }
+    if (!fFecha) { showToast('Elige la fecha', 'warn'); return; }
     setGuardando(true);
     try {
-      await API.crearGuardiaExterna({ fecha, lugar: lugar.trim() || undefined });
-      setAbierta(false); setLugar('');
+      await API.crearGuardiaExterna({ user_id: fResi, fecha: fFecha, lugar: fLugar.trim() || undefined });
+      setAlta(false);
       showToast('Guardia externa apuntada');
-      const d = new Date(fecha + 'T00:00:00');
+      const d = new Date(fFecha + 'T00:00:00');
       if (d.getFullYear() === y && d.getMonth() === m) cargar();
       else { setY(d.getFullYear()); setM(d.getMonth()); }
     } catch (e) {
@@ -446,6 +487,7 @@ function ExternasScreen() {
       const r = await API.borrarGuardiaExterna(aBorrar.id);
       showToast(r.mensaje || 'Eliminada', 'warn');
       setABorrar(null);
+      setDiaAbierto(null);
       cargar();
     } catch (e) {
       showToast(e.message, 'err');
@@ -453,17 +495,16 @@ function ExternasScreen() {
   }
 
   return (
-    <div className="page-pad" onTouchStart={onTS} onTouchEnd={onTE}>
+    <div className="page-pad">
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <h2 className="page-title" style={{ flex: 1 }}>Guardias externas</h2>
-        {current.guardias && (
-          <button className="btn btn-primary btn-sm"
-            onClick={() => { setFecha(API.iso(y, m, GD.TODAY)); setAbierta(true); }}>
+        {isTutor && (
+          <button className="btn btn-primary btn-sm" onClick={() => abrirAlta()}>
             <Icon name="plus" size={16} /> Apuntar
           </button>
         )}
       </div>
-      <p className="page-sub">Guardias hechas en rotatorios fuera del hospital. Cuentan para tus límites Vi/Sá/Do.</p>
+      <p className="page-sub">Guardias en rotatorios fuera del hospital. Cuentan para los límites Vi/Sá/Do.{isTutor ? '' : ' Las gestiona el tutor.'}</p>
 
       <div className="cal-head">
         <div className="cal-month">{GD.MONTHS[m]} {y}</div>
@@ -473,64 +514,101 @@ function ExternasScreen() {
         </div>
       </div>
 
-      {items === null && <div className="empty">Cargando…</div>}
+      <div className="dow">
+        {GD.DOW.map((d, i) => <div key={d} className={i >= 4 ? 'we' : ''}>{d}</div>)}
+      </div>
+
+      <div className="grid" onTouchStart={onTS} onTouchEnd={onTE}>
+        {cells.map((d, i) => d === null
+          ? <div key={'e' + i} />
+          : <DayCell key={d} day={d} ids={porDia[d] || []} dow={dowFor(d)}
+              isToday={y === GD.YEAR && m === GD.MONTH && d === GD.TODAY} treatment={treat}
+              onClick={() => setDiaAbierto(d)} />)}
+      </div>
+
       {items && items.length === 0 && (
         <div className="empty">No hay guardias externas este mes.</div>
       )}
-      {items && items.length > 0 && (
-        <div className="card" style={{ padding: '4px 16px' }}>
-          {items.map((g) => {
-            const u = GD.byId[g.user_id] || { id: g.user_id, nombre: 'Residente', ini: '·', color: null };
-            const et = etiqueta(g.fecha);
-            const mia = g.user_id === current.id;
-            return (
-              <div key={g.id} className="row">
-                <div style={{
-                  minWidth: 44, textAlign: 'center', borderRadius: 12, padding: '4px 6px',
-                  background: et.finde ? 'var(--amber-bg)' : 'var(--surface-3)',
-                }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>{et.dow}</div>
-                  <div style={{ fontSize: 17, fontWeight: 800 }}>{et.dia}</div>
-                </div>
-                <Avatar user={u} size={34} />
-                <div className="row-main">
-                  <div className="row-title">{u.nombre}</div>
-                  <div className="row-meta">{g.lugar || 'Hospital externo'}</div>
-                </div>
-                {(mia || isStaff) && (
-                  <button className="iconbtn" onClick={() => setABorrar(g)} aria-label="Eliminar">
-                    <Icon name="close" size={18} style={{ color: 'var(--red-text)' }} />
-                  </button>
-                )}
+
+      {presentes.length > 0 && (
+        <div className="card legend-card">
+          <div className="section-label" style={{ margin: '0 0 12px' }}>Residentes con externas</div>
+          <div className="legend">
+            {presentes.map((u) => (
+              <div key={u.id} className="legend-item">
+                <ColorDot color={u.color} />
+                <span>{u.nombre} <b className="legend-count">({cuentaMes(u.id)})</b></span>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Apuntar guardia externa */}
-      <Sheet open={abierta} onClose={() => setAbierta(false)}
+      {/* Detalle del día */}
+      <Sheet open={diaAbierto !== null} onClose={() => setDiaAbierto(null)}
+        title={diaAbierto ? fechaLabel(diaAbierto) : ''}
+        sub={delDia(diaAbierto || 0).length ? 'Guardias externas de este día' : 'Sin guardias externas este día'}>
+        {delDia(diaAbierto || 0).map((g) => {
+          const u = GD.byId[g.user_id] || { id: g.user_id, nombre: 'Residente', ini: '·', color: null, anio: '' };
+          return (
+            <div key={g.id} className="detail-res">
+              <Avatar user={u} size={42} />
+              <div className="row-main">
+                <div className="row-title">{u.nombre}</div>
+                <div className="row-meta">{g.lugar || 'Hospital externo'}</div>
+              </div>
+              {isTutor && (
+                <button className="iconbtn" onClick={() => setABorrar(g)} aria-label="Eliminar">
+                  <Icon name="close" size={18} style={{ color: 'var(--red-text)' }} />
+                </button>
+              )}
+            </div>
+          );
+        })}
+        {isTutor && diaAbierto !== null && (
+          <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => abrirAlta(diaAbierto)}>
+            <Icon name="plus" size={16} /> Apuntar externa este día
+          </button>
+        )}
+      </Sheet>
+
+      {/* Alta (solo tutor): residente + fecha + lugar */}
+      <Sheet open={alta} onClose={() => setAlta(false)}
         title="Apuntar guardia externa"
-        sub="Solo para guardias hechas fuera del hospital durante un rotatorio. Contará en tus estadísticas y límites.">
-        <div className="field">
+        sub="Guardia hecha fuera del hospital durante un rotatorio. Contará en estadísticas y límites del residente.">
+        <div className="section-label">Residente</div>
+        <div className="assign-grid">
+          {elegibles.map((u) => (
+            <button key={u.id} className={'assign-chip' + (fResi === u.id ? ' on' : '')}
+              onClick={() => setFResi(u.id)}>
+              <Avatar user={u} size={30} />
+              <div style={{ minWidth: 0 }}>
+                <div className="nm">{u.nombre.split(' ')[0]}</div>
+                <div className="rl">{u.anio}</div>
+              </div>
+              {fResi === u.id && <Icon name="check" size={16} style={{ marginLeft: 'auto', color: 'var(--accent)' }} />}
+            </button>
+          ))}
+        </div>
+        <div className="field" style={{ marginTop: 12 }}>
           <label className="field-label">Fecha</label>
-          <input className="input" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+          <input className="input" type="date" value={fFecha} onChange={(e) => setFFecha(e.target.value)} />
         </div>
         <div className="field">
           <label className="field-label">Hospital / lugar <span style={{ color: 'var(--text-faint)', fontWeight: 500 }}>(opcional)</span></label>
-          <input className="input" value={lugar} maxLength={80}
-            onChange={(e) => setLugar(e.target.value)} placeholder="Ej.: Hospital La Fe (Valencia)" />
+          <input className="input" value={fLugar} maxLength={80}
+            onChange={(e) => setFLugar(e.target.value)} placeholder="Ej.: Hospital La Fe (Valencia)" />
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }} disabled={guardando} onClick={guardar}>
+        <button className="btn btn-primary" style={{ marginTop: 8 }} disabled={guardando || !fResi} onClick={guardar}>
           <Icon name="check" size={17} /> {guardando ? 'Guardando…' : 'Aceptar'}
         </button>
       </Sheet>
 
-      {/* Confirmar borrado */}
+      {/* Confirmar borrado (tutor) */}
       <Dialog open={!!aBorrar} onClose={() => setABorrar(null)}>
         {aBorrar && (<>
           <h3 className="dlg-title">¿Eliminar esta guardia externa?</h3>
-          <p className="dlg-text">{etiqueta(aBorrar.fecha).dow} {etiqueta(aBorrar.fecha).dia} · {aBorrar.lugar || 'Hospital externo'}. Dejará de contar en las estadísticas.</p>
+          <p className="dlg-text">{(GD.byId[aBorrar.user_id] || { nombre: 'Residente' }).nombre} · {aBorrar.fecha} · {aBorrar.lugar || 'Hospital externo'}. Dejará de contar en las estadísticas.</p>
           <button className="btn btn-danger" onClick={borrar}>Sí, eliminar</button>
           <button className="btn btn-ghost" style={{ marginTop: 6 }} onClick={() => setABorrar(null)}>Cancelar</button>
         </>)}

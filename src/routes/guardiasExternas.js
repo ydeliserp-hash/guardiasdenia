@@ -2,8 +2,8 @@
 
 /**
  * Guardias externas (rotatorios fuera del hospital).
- * - Cada residente apunta y borra LAS SUYAS (staff puede borrar cualquiera).
- * - Visibles para todos en la pestaña "Externas".
+ * - SOLO el tutor las apunta y las borra (indicando el residente).
+ * - Visibles para todos en la pestaña "Externas" (formato calendario).
  * - Cuentan en estadísticas/límites Vi-Sa-Do y en la regla de días
  *   consecutivos (validada aquí contra planilla + externas).
  */
@@ -12,7 +12,7 @@ const express = require('express');
 const { z } = require('zod');
 
 const { query, withTransaction } = require('../config/db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const asyncHandler = require('../middleware/asyncHandler');
 const { errores } = require('../utils/errors');
@@ -28,6 +28,7 @@ const mesQuery = z.object({
 });
 
 const crearSchema = z.object({
+  user_id: z.string().min(1, 'Falta el residente (user_id).'),
   fecha: z.string().refine(isValidISODate, 'Fecha inválida (YYYY-MM-DD).'),
   lugar: z.string().trim().max(80, 'El lugar no puede superar 80 caracteres.').optional(),
 });
@@ -50,25 +51,34 @@ router.get(
   }),
 );
 
-// POST /guardias-externas — el usuario actual apunta UNA guardia externa suya.
+// POST /guardias-externas — SOLO el tutor apunta una guardia externa a un residente.
 router.post(
   '/',
   requireAuth,
+  requireRole('tutor'),
   validate(crearSchema),
   asyncHandler(async (req, res) => {
-    if (!req.user.hace_guardias) {
-      throw errores.prohibido('Tu perfil no hace guardias.');
-    }
-    const { fecha } = req.body;
+    const { user_id: userId, fecha } = req.body;
     const lugar = req.body.lugar || null;
 
     const creada = await withTransaction(async (client) => {
+      const { rows: uRows } = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
+      const destinatario = uRows[0];
+      if (!destinatario || !destinatario.activo) {
+        throw errores.validacion('El residente indicado no existe o está dado de baja.');
+      }
+      if (!destinatario.hace_guardias) {
+        throw errores.validacion(`${destinatario.nombre} no hace guardias.`);
+      }
+
       // duplicado exacto
       const { rows: dup } = await client.query(
         'SELECT 1 FROM guardias_externas WHERE user_id = $1 AND fecha = $2',
-        [req.user.id, fecha],
+        [userId, fecha],
       );
-      if (dup.length) throw errores.conflicto(`Ya tienes apuntada una guardia externa el ${shortLabel(fecha)}.`);
+      if (dup.length) {
+        throw errores.conflicto(`${destinatario.nombre} ya tiene una guardia externa el ${shortLabel(fecha)}.`);
+      }
 
       // REGLA DURA: días consecutivos, contra planilla interna + externas.
       const vecinos = [addDays(fecha, -1), fecha, addDays(fecha, 1)];
@@ -76,16 +86,16 @@ router.post(
         `SELECT fecha FROM shifts WHERE user_id = $1 AND fecha = ANY($2::date[])
          UNION ALL
          SELECT fecha FROM guardias_externas WHERE user_id = $1 AND fecha = ANY($2::date[])`,
-        [req.user.id, vecinos],
+        [userId, vecinos],
       );
       const dias = ocupados.map((o) => toISODate(o.fecha));
       if (dias.includes(fecha)) {
-        throw errores.conflicto(`Ya tienes una guardia el ${shortLabel(fecha)} en el calendario.`);
+        throw errores.conflicto(`${destinatario.nombre} ya tiene una guardia el ${shortLabel(fecha)} en el calendario.`);
       }
       const adyacentes = dias.filter((d) => d !== fecha);
       if (adyacentes.length) {
         throw errores.reglaNegocio(
-          `No permitido: quedarías con guardias en días consecutivos `
+          `No permitido: ${destinatario.nombre} quedaría con guardias en días consecutivos `
           + `(${shortLabel(fecha)} junto a ${adyacentes.map(shortLabel).join(' y ')}).`,
         );
       }
@@ -93,7 +103,7 @@ router.post(
       const { rows } = await client.query(
         `INSERT INTO guardias_externas (user_id, fecha, lugar)
          VALUES ($1, $2, $3) RETURNING id, user_id, fecha, lugar`,
-        [req.user.id, fecha, lugar],
+        [userId, fecha, lugar],
       );
 
       await registrarAuditoria(client, {
@@ -101,7 +111,7 @@ router.post(
         entidadId: fecha,
         accion: 'asignacion_guardia',
         actorId: req.user.id,
-        detalle: { externa: true, fecha, lugar },
+        detalle: { externa: true, para: userId, fecha, lugar },
       });
 
       return rows[0];
@@ -111,12 +121,12 @@ router.post(
   }),
 );
 
-// DELETE /guardias-externas/:id — el dueño o staff.
+// DELETE /guardias-externas/:id — SOLO el tutor.
 router.delete(
   '/:id',
   requireAuth,
+  requireRole('tutor'),
   asyncHandler(async (req, res) => {
-    const esStaff = ['r4', 'tutor'].includes(req.user.role);
     const eliminada = await withTransaction(async (client) => {
       const { rows } = await client.query(
         'SELECT * FROM guardias_externas WHERE id = $1 FOR UPDATE',
@@ -124,9 +134,6 @@ router.delete(
       );
       const g = rows[0];
       if (!g) throw errores.noEncontrado('Esa guardia externa no existe.');
-      if (g.user_id !== req.user.id && !esStaff) {
-        throw errores.prohibido('Solo puedes borrar tus propias guardias externas.');
-      }
       await client.query('DELETE FROM guardias_externas WHERE id = $1', [g.id]);
       await registrarAuditoria(client, {
         entidad: 'guardia',
