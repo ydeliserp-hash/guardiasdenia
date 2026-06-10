@@ -35,9 +35,11 @@ const altaSchema = z.object({
 const editarSchema = z.object({
   nombre: z.string().trim().min(1).optional(),
   trato: z.string().trim().min(1).optional(),
+  dni: z.string().trim().min(1).optional(),
   anio: z.string().trim().min(1).optional(),
   role: z.enum(ROLES).optional(),
-  color: z.enum(COLORES).optional(),
+  // null = quitar el color (p. ej. al pasar a tutor)
+  color: z.enum(COLORES).nullable().optional(),
   aplica_limites: z.boolean().optional(),
   hace_guardias: z.boolean().optional(),
   activo: z.boolean().optional(),
@@ -159,6 +161,14 @@ router.patch(
 
       // Construye el SET dinámico solo con los campos enviados.
       const campos = { ...cambios };
+      if (campos.dni) {
+        campos.dni = campos.dni.toUpperCase();
+        const { rows: dup } = await client.query(
+          'SELECT 1 FROM users WHERE dni = $1 AND id <> $2',
+          [campos.dni, prev.id],
+        );
+        if (dup.length) throw errores.conflicto('Ya existe otro usuario con ese DNI.');
+      }
       if (cambios.nombre && !cambios.iniciales) {
         campos.iniciales = derivarIniciales(cambios.nombre);
       }

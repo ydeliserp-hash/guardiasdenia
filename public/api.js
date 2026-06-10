@@ -77,5 +77,7 @@
     publicarPlan: (anio, mes1) => call('/planes/' + anio + '/' + mes1 + '/publicar', { method: 'POST', body: {} }),
     borradorPlan: (anio, mes1) => call('/planes/' + anio + '/' + mes1 + '/borrador', { method: 'POST', body: {} }),
     altaUsuario: (body) => call('/usuarios', { method: 'POST', body }),
+    editarUsuario: (id, body) => call('/usuarios/' + id, { method: 'PATCH', body }),
+    bajaUsuario: (id) => call('/usuarios/' + id, { method: 'DELETE' }),
   };
 })();

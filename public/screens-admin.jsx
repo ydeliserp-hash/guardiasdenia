@@ -11,11 +11,17 @@ const ROLES = [
 const ROLE_LABEL = { tutor: 'Tutora', r4: 'R4 · Admin', residente: 'Residente', externo: 'Externo' };
 
 function AdminScreen() {
-  const { users, syncUsers, setScreen, setEditMode, showToast } = useApp();
+  const { users, syncUsers, setScreen, setEditMode, showToast, current } = useApp();
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [created, setCreated] = useState(null); // usuario recién creado (con código de activación)
   const [f, setF] = useState({ nombre: '', dni: '', role: 'residente', anio: 'R1', color: null, limites: true });
+
+  // edición de un usuario existente
+  const [editing, setEditing] = useState(null); // usuario seleccionado
+  const [fe, setFe] = useState(null);           // formulario de edición
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [confirmBaja, setConfirmBaja] = useState(false);
 
   const usedColors = new Set(users.map(u => u.color));
 
@@ -23,10 +29,62 @@ function AdminScreen() {
 
   // Elegir una opción cierra antes el teclado del móvil: si queda abierto,
   // en iOS la hoja fija se descoloca y deja de responder al scroll.
-  function elegir(patch) {
+  function cerrarTeclado() {
     const el = document.activeElement;
     if (el && typeof el.blur === 'function') el.blur();
-    setF(prev => ({ ...prev, ...patch }));
+  }
+  function elegir(patch) { cerrarTeclado(); setF(prev => ({ ...prev, ...patch })); }
+  function elegirE(patch) { cerrarTeclado(); setFe(prev => ({ ...prev, ...patch })); }
+
+  function abrirEdicion(u) {
+    setFe({
+      nombre: u.nombre, dni: u.dni || '', role: u.role,
+      anio: ['R1', 'R2', 'R3', 'R4'].includes(u.anio) ? u.anio : 'R1',
+      color: u.color || null, limites: u.limites,
+    });
+    setConfirmBaja(false);
+    setEditing(u);
+  }
+
+  const editColorOk = fe && (fe.role === 'tutor' || fe.color);
+  const completoE = !!(fe && fe.nombre.trim() && fe.dni.trim() && editColorOk);
+
+  async function guardarEdicion() {
+    if (!completoE) { showToast('Completa los datos obligatorios', 'warn'); return; }
+    setSavingEdit(true);
+    try {
+      await API.editarUsuario(editing.id, {
+        nombre: fe.nombre.trim(),
+        dni: fe.dni.trim().toUpperCase(),
+        role: fe.role,
+        anio: fe.role === 'externo' ? 'Externo' : fe.role === 'tutor' ? 'Tutora' : fe.anio,
+        color: fe.role === 'tutor' ? null : fe.color,
+        aplica_limites: fe.role === 'externo' ? fe.limites : true,
+        hace_guardias: fe.role !== 'tutor',
+      });
+      await syncUsers();
+      setEditing(null);
+      showToast('Usuario actualizado');
+    } catch (e) {
+      showToast(e.message, 'err');
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function darDeBaja() {
+    setSavingEdit(true);
+    try {
+      await API.bajaUsuario(editing.id);
+      await syncUsers();
+      setEditing(null);
+      showToast('Usuario dado de baja (su color queda libre)', 'warn');
+    } catch (e) {
+      showToast(e.message, 'err');
+    } finally {
+      setSavingEdit(false);
+      setConfirmBaja(false);
+    }
   }
   // El tutor no necesita color: no aparece en el calendario.
   const necesitaColor = f.role !== 'tutor';
@@ -74,7 +132,7 @@ function AdminScreen() {
       <div className="section-label">Usuarios ({users.length})</div>
       <div className="card" style={{ padding: '4px 16px' }}>
         {users.map(u => (
-          <div key={u.id} className="row">
+          <div key={u.id} className="row" onClick={() => abrirEdicion(u)} style={{ cursor: 'pointer' }}>
             <ColorDot color={u.color} />
             <div className="row-main">
               <div className="row-title">{u.nombre}</div>
@@ -84,8 +142,10 @@ function AdminScreen() {
               <span className={'pill ' + (u.role === 'tutor' ? 'pill-blue' : u.role === 'externo' ? 'pill-muted' : 'pill-green')}>{ROLE_LABEL[u.role]}</span>
               {u.role === 'externo' && !u.limites && <span className="mini-note">sin control Vi/Sa/Do</span>}
             </div>
+            <Icon name="chevR" size={16} style={{ color: 'var(--text-faint)', flexShrink: 0 }} />
           </div>
         ))}
+        <div className="mini-note" style={{ padding: '2px 0 10px' }}>Toca un usuario para editar sus datos.</div>
       </div>
 
       {/* Alta de usuario */}
@@ -165,6 +225,90 @@ function AdminScreen() {
           </p>
           <p className="dlg-text">Entrégaselo para su primer acceso (DNI + código). No caduca y solo puede usarse una vez. También podrás verlo en la lista de usuarios mientras no lo use.</p>
           <button className="btn btn-primary" onClick={() => setCreated(null)}>Entendido</button>
+        </>)}
+      </Dialog>
+
+      {/* Edición de un usuario existente */}
+      <Sheet open={!!editing} onClose={() => setEditing(null)}
+        title={editing ? `Editar a ${editing.nombre.split(' ')[0]}` : ''}
+        sub="Corrige los datos del usuario. Los cambios quedan registrados en el histórico.">
+        {fe && (<>
+          <div className="field">
+            <label className="field-label">Nombre completo</label>
+            <input className="input" value={fe.nombre} onChange={e => setFe({ ...fe, nombre: e.target.value })} />
+          </div>
+          <div className="field">
+            <label className="field-label">DNI</label>
+            <input className="input" value={fe.dni} onChange={e => setFe({ ...fe, dni: e.target.value })} autoCapitalize="characters" />
+          </div>
+          <div className="field">
+            <label className="field-label">Rol</label>
+            <div className="seg">
+              {ROLES.map(r => <button key={r.id} className={fe.role === r.id ? 'on' : ''} onClick={() => elegirE({ role: r.id })}>{r.label}</button>)}
+            </div>
+          </div>
+          {(fe.role === 'residente' || fe.role === 'r4') && (
+            <div className="field">
+              <label className="field-label">Año de residencia</label>
+              <div className="seg">
+                {['R1', 'R2', 'R3', 'R4'].map(a => <button key={a} className={fe.anio === a ? 'on' : ''} onClick={() => elegirE({ anio: a })}>{a}</button>)}
+              </div>
+            </div>
+          )}
+          {fe.role === 'externo' && (
+            <button className="set-row plain" onClick={() => elegirE({ limites: !fe.limites })}>
+              <span>Aplicar control de límites Vi/Sa/Do</span>
+              <div className="set-toggle" data-on={fe.limites}><span /></div>
+            </button>
+          )}
+          {fe.role !== 'tutor' && (
+            <div className="field" style={{ marginTop: 6 }}>
+              <label className="field-label">Color asignado</label>
+              <div className="color-grid">
+                {GD.PASTEL_ORDER.map(c => {
+                  // su propio color actual sigue disponible para él
+                  const used = usedColors.has(c) && c !== editing.color;
+                  return (
+                    <button key={c} className={'swatch' + (fe.color === c ? ' on' : '') + (used ? ' used' : '')}
+                      disabled={used} title={used ? 'En uso' : GD.PASTEL_LABEL[c]}
+                      style={{ background: GD.PASTELS[c] }}
+                      onClick={() => elegirE({ color: c })}>
+                      {fe.color === c && <Icon name="check" size={16} style={{ color: '#1F2937' }} />}
+                      {used && <Icon name="close" size={14} style={{ color: '#1F2937', opacity: .4 }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div style={{
+            position: 'sticky', bottom: 0, margin: '14px -18px 0', padding: '12px 18px 4px',
+            background: 'var(--surface)', boxShadow: '0 -10px 14px -12px rgba(0,0,0,0.25)',
+          }}>
+            <button className="btn btn-primary" style={{ width: '100%' }}
+              disabled={savingEdit || !completoE} onClick={guardarEdicion}>
+              <Icon name="check" size={17} /> {savingEdit ? 'Guardando…' : 'Guardar cambios'}
+            </button>
+            {editing && current && editing.id !== current.id && (
+              <button className="btn btn-ghost btn-sm" style={{ width: '100%', marginTop: 8, color: 'var(--red-text)' }}
+                disabled={savingEdit} onClick={() => setConfirmBaja(true)}>
+                Dar de baja
+              </button>
+            )}
+          </div>
+        </>)}
+      </Sheet>
+
+      {/* Confirmación de baja */}
+      <Dialog open={confirmBaja} onClose={() => setConfirmBaja(false)}>
+        {editing && (<>
+          <h3 className="dlg-title">¿Dar de baja a {editing.nombre.split(' ')[0]}?</h3>
+          <p className="dlg-text">Dejará de poder entrar en la app y su color quedará libre. Su historial se conserva. Esta acción la puede revertir un administrador.</p>
+          <button className="btn btn-danger" disabled={savingEdit} onClick={darDeBaja}>
+            {savingEdit ? 'Dando de baja…' : 'Sí, dar de baja'}
+          </button>
+          <button className="btn btn-ghost" style={{ marginTop: 6 }} onClick={() => setConfirmBaja(false)}>Cancelar</button>
         </>)}
       </Dialog>
     </div>
