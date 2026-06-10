@@ -81,7 +81,11 @@ function AppProvider({ children }) {
   // fondo del documento acorde al tema (evita franjas blancas en los bordes/rebote)
   useEffect(() => {
     document.body.setAttribute('data-stage', theme);
-    document.documentElement.style.backgroundColor = theme === 'dark' ? '#0D1318' : '#DDE3EA';
+    const fondo = theme === 'dark' ? '#0D1318' : '#DDE3EA';
+    document.documentElement.style.backgroundColor = fondo;
+    document.body.style.backgroundColor = fondo;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0D1318' : '#16304f');
   }, [theme]);
 
   const [reqSeed, setReqSeed] = useState(null); // {fromDay, mode} to preload Cambios flow
