@@ -736,3 +736,18 @@
   text-align: center; color: var(--text-faint);
   padding: 40px 20px; font-size: 13.5px;
 }
+
+/* ---------- Móvil real: app a pantalla completa (sin marco de iPhone) ---------- */
+.app-root.mobile-full {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh; /* viewport dinámico: evita saltos con la barra del navegador */
+  /* respeta el notch / Dynamic Island cuando se instala como app */
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.app-root.mobile-full .botnav {
+  /* hueco para la barra de inicio del iPhone */
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 10px));
+}

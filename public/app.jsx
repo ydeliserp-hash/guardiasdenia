@@ -331,21 +331,15 @@ function Cargando() {
 }
 
 function Phone() {
+  // Móvil real: la app ocupa toda la pantalla, sin el marco de iPhone del
+  // prototipo (el sistema ya pone su propia barra de estado).
   const { theme, authed, booting } = useApp();
-  const dark = theme === 'dark';
   useEffect(() => { document.body.setAttribute('data-stage', theme); }, [theme]);
   return (
-    <div className="device" style={{ background: dark ? '#0A0F14' : '#F2F2F7' }}>
-      <div className="island" />
-      <div className="app-root" data-theme={theme}>
-        <div className="statusband" style={{ background: 'var(--surface)' }}>
-          <IOSStatusBar dark={dark} time="9:41" />
-        </div>
-        <div className="frame-body">
-          {booting ? <Cargando /> : authed ? <AppMain /> : <AuthScreen />}
-        </div>
+    <div className="app-root mobile-full" data-theme={theme}>
+      <div className="frame-body">
+        {booting ? <Cargando /> : authed ? <AppMain /> : <AuthScreen />}
       </div>
-      <div className="home-ind" style={{ background: dark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.28)' }} />
     </div>
   );
 }
@@ -495,12 +489,11 @@ const scaler = document.getElementById('scaler');
 scaler.innerHTML = '';
 ReactDOM.createRoot(scaler).render(<App />);
 
+// Sin marco de dispositivo ya no se escala nada: la app ocupa la pantalla.
+// 'none' (y no 'scale(1)') porque cualquier transform en un ancestro rompería
+// el position:fixed del contenedor móvil.
 function fit() {
-  const scaler = document.getElementById('scaler');
-  if (window.innerWidth >= 900) { scaler.style.transform = 'scale(1)'; return; }
-  const DW = 402, DH = 874, pad = 28;
-  const s = Math.min(1, (window.innerWidth - pad) / DW, (window.innerHeight - pad) / DH);
-  scaler.style.transform = `scale(${s})`;
+  document.getElementById('scaler').style.transform = 'none';
 }
 window.addEventListener('resize', fit);
 setTimeout(fit, 30); fit();
