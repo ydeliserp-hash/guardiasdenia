@@ -11,6 +11,7 @@
 
 const webpush = require('web-push');
 const { query } = require('../config/db');
+const { ApiError } = require('../utils/errors');
 
 const VAPID_SUBJECT = 'mailto:ydeliserp@gmail.com';
 
@@ -19,7 +20,15 @@ let vapidCache = null;
 /** Devuelve el par de claves VAPID, creándolo si aún no existe. */
 async function getVapid() {
   if (vapidCache) return vapidCache;
-  const { rows } = await query('SELECT public_key, private_key FROM push_config WHERE id = 1');
+  let rows;
+  try {
+    ({ rows } = await query('SELECT public_key, private_key FROM push_config WHERE id = 1'));
+  } catch (err) {
+    if (err.code === '42P01') { // la tabla no existe aún
+      throw new ApiError(503, 'Las notificaciones push aún no están preparadas: falta ejecutar la actualización de la base de datos (003) en Supabase.', { codigo: 'push_no_configurado' });
+    }
+    throw err;
+  }
   if (rows[0]) {
     vapidCache = rows[0];
     return vapidCache;
