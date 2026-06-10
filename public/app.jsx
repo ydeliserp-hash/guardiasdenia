@@ -415,7 +415,7 @@ function DeskRail() {
           <Avatar user={current} size={36} />
           <div style={{ minWidth: 0, textAlign: 'left' }}>
             <div className="dk-user-n">{current.nombre}</div>
-            <div className="dk-user-r">{current.role === 'tutor' ? 'Tutora' : current.role === 'r4' ? 'R4 · Admin' : current.role === 'externo' ? 'Externo' : current.anio}</div>
+            <div className="dk-user-r">{current.role === 'tutor' ? 'Tutor' : current.role === 'r4' ? 'R4 · Admin' : current.role === 'externo' ? 'Externo' : current.anio}</div>
           </div>
         </button>
       </div>

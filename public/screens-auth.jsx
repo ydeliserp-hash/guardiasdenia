@@ -136,7 +136,7 @@ function AuthScreen() {
             <Icon name="arrow-left" size={18} /> Volver
           </div>
           <h2 className="sheet-title" style={{ marginTop: 4 }}>Primer acceso</h2>
-          <p className="sheet-sub">Introduce tu DNI y el código de activación que te ha facilitado tu tutora.</p>
+          <p className="sheet-sub">Introduce tu DNI y el código de activación que te ha facilitado tu tutor.</p>
           <div className="field">
             <label className="field-label">DNI</label>
             <input className={'input' + (err.dni ? ' err' : '')} value={dni}
@@ -146,7 +146,7 @@ function AuthScreen() {
           <div className="field">
             <label className="field-label">Código de activación</label>
             <input className={'input' + (err.code ? ' err' : '')} value={code}
-              onChange={e => setCode(e.target.value)} placeholder="Código facilitado por tu tutora" autoCapitalize="characters" />
+              onChange={e => setCode(e.target.value)} placeholder="Código facilitado por tu tutor" autoCapitalize="characters" />
             {err.code && <div className="field-err">{err.code}</div>}
           </div>
           <button className="btn btn-primary" disabled={busy} onClick={doActivar}>{busy ? 'Comprobando…' : 'Continuar'}</button>

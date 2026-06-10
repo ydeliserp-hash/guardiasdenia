@@ -8,7 +8,7 @@ const ROLES = [
   { id: 'residente', label: 'Residente' },
   { id: 'externo', label: 'Externo' },
 ];
-const ROLE_LABEL = { tutor: 'Tutora', r4: 'R4 · Admin', residente: 'Residente', externo: 'Externo' };
+const ROLE_LABEL = { tutor: 'Tutor', r4: 'R4 · Admin', residente: 'Residente', externo: 'Externo' };
 
 function AdminScreen() {
   const { users, syncUsers, setScreen, setEditMode, showToast, current } = useApp();
@@ -57,7 +57,7 @@ function AdminScreen() {
         nombre: fe.nombre.trim(),
         dni: fe.dni.trim().toUpperCase(),
         role: fe.role,
-        anio: fe.role === 'externo' ? 'Externo' : fe.role === 'tutor' ? 'Tutora' : fe.anio,
+        anio: fe.role === 'externo' ? 'Externo' : fe.role === 'tutor' ? 'Tutor' : fe.anio,
         color: fe.role === 'tutor' ? null : fe.color,
         aplica_limites: fe.role === 'externo' ? fe.limites : true,
         hace_guardias: fe.role !== 'tutor',
@@ -98,7 +98,7 @@ function AdminScreen() {
         nombre: f.nombre.trim(),
         dni: f.dni.trim().toUpperCase(),
         role: f.role,
-        anio: f.role === 'externo' ? 'Externo' : f.role === 'tutor' ? 'Tutora' : f.anio,
+        anio: f.role === 'externo' ? 'Externo' : f.role === 'tutor' ? 'Tutor' : f.anio,
         color: necesitaColor ? f.color : undefined,
         aplica_limites: f.role === 'externo' ? f.limites : true,
       });

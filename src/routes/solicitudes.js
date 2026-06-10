@@ -357,7 +357,7 @@ router.post(
           userId: uid,
           tipo: 'aprobada',
           icono: 'check',
-          titulo: 'Cambio aprobado por la tutora',
+          titulo: 'Cambio aprobado por el tutor',
           cuerpo: `El ${request.tipo === 'intercambio' ? 'intercambio' : 'la cesión'} ha sido aprobado y ya está aplicado en el calendario.`,
           refRequestId: request.id,
         });
@@ -369,7 +369,7 @@ router.post(
     // Push a ambas partes: el cambio ya está aplicado en el calendario.
     for (const uid of [out.de_user_id, out.a_user_id]) {
       await enviarPush(uid, {
-        titulo: 'Cambio aprobado por la tutora',
+        titulo: 'Cambio aprobado por el tutor',
         cuerpo: 'El cambio ha sido aprobado y ya está aplicado en el calendario.',
         url: '/',
       });
