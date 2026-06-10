@@ -21,7 +21,7 @@ function AuthScreen() {
     if (Object.keys(e).length) return;
     setBusy(true);
     try {
-      const { token, user } = await API.login(dni.trim(), pass);
+      const { token, user } = await API.login(dni.trim().toUpperCase(), pass);
       API.setToken(token);
       await loginOk(user);
     } catch (ex) {
@@ -39,7 +39,7 @@ function AuthScreen() {
     if (Object.keys(e).length) return;
     setBusy(true);
     try {
-      const r = await API.primerAcceso(dni.trim(), code.replace(/\s/g, '').toUpperCase());
+      const r = await API.primerAcceso(dni.trim().toUpperCase(), code.replace(/\s/g, '').toUpperCase());
       setTempToken(r.tempToken);
       setMode('crear');
     } catch (ex) {
@@ -88,6 +88,7 @@ function AuthScreen() {
             <label className="field-label">Contraseña</label>
             <input className={'input' + (err.pass ? ' err' : '')} type="password" value={pass}
               onChange={e => setPass(e.target.value)} placeholder="••••••••"
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="current-password"
               onKeyDown={e => { if (e.key === 'Enter') doLogin(); }} />
             {err.pass && <div className="field-err">{err.pass}</div>}
           </div>
@@ -123,17 +124,19 @@ function AuthScreen() {
             <Icon name="arrow-left" size={18} /> Volver
           </div>
           <h2 className="sheet-title" style={{ marginTop: 4 }}>Crea tu contraseña</h2>
-          <p className="sheet-sub">Debe tener al menos 6 caracteres. La usarás para entrar a partir de ahora.</p>
+          <p className="sheet-sub">Al menos 6 caracteres: letras, números o una combinación. Se distingue entre mayúsculas y minúsculas. La usarás para entrar a partir de ahora.</p>
           <div className="field">
             <label className="field-label">Nueva contraseña</label>
             <input className={'input' + (err.p1 ? ' err' : '')} type="password" value={p1}
-              onChange={e => setP1(e.target.value)} placeholder="••••••••" />
+              onChange={e => setP1(e.target.value)} placeholder="••••••••"
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="new-password" />
             {err.p1 && <div className="field-err">{err.p1}</div>}
           </div>
           <div className="field">
             <label className="field-label">Repite la contraseña</label>
             <input className={'input' + (err.p2 ? ' err' : '')} type="password" value={p2}
-              onChange={e => setP2(e.target.value)} placeholder="••••••••" />
+              onChange={e => setP2(e.target.value)} placeholder="••••••••"
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="new-password" />
             {err.p2 && <div className="field-err">{err.p2}</div>}
           </div>
           <button className="btn btn-primary" disabled={busy} onClick={doCrear}>{busy ? 'Creando…' : 'Crear contraseña y entrar'}</button>
