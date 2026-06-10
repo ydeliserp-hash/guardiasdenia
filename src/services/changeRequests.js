@@ -26,35 +26,26 @@ const {
 const COL = { vi: 'vi', sa: 'sa', do: 'do_' }; // mapeo clave → columna
 
 // ---------------------------------------------------------------------------
-// Contadores anuales (year_stats)
+// Contadores anuales — DERIVADOS del calendario publicado (fuente única de
+// verdad). Antes vivían en year_stats (sembrados del prototipo); con datos
+// reales se calculan siempre en vivo: cargar/editar planilla o aprobar
+// cambios los actualiza automáticamente, sin doble contabilidad.
 // ---------------------------------------------------------------------------
 
-async function getYearStat(client, userId, anio) {
+async function contarAnual(client, userId, anio) {
   const { rows } = await client.query(
-    'SELECT * FROM year_stats WHERE user_id = $1 AND anio = $2',
+    `SELECT count(*)::int AS guardias_anio,
+            count(*) FILTER (WHERE EXTRACT(ISODOW FROM s.fecha) = 5)::int AS vi,
+            count(*) FILTER (WHERE EXTRACT(ISODOW FROM s.fecha) = 6)::int AS sa,
+            count(*) FILTER (WHERE EXTRACT(ISODOW FROM s.fecha) = 7)::int AS do_
+       FROM shifts s
+       JOIN month_plans p ON p.id = s.plan_id AND p.estado = 'publicado'
+      WHERE s.user_id = $1
+        AND s.fecha >= make_date($2, 1, 1)
+        AND s.fecha <  make_date($2 + 1, 1, 1)`,
     [userId, anio],
   );
-  return rows[0] || null;
-}
-
-/**
- * Aplica deltas (pueden ser negativos) a los contadores de un usuario/año.
- * Crea la fila si no existe y nunca baja de 0.
- */
-async function aplicarDeltaContador(client, userId, anio, { guardiasAnio = 0, vi = 0, sa = 0, do: doDelta = 0 }) {
-  await client.query(
-    'INSERT INTO year_stats (user_id, anio) VALUES ($1, $2) ON CONFLICT (user_id, anio) DO NOTHING',
-    [userId, anio],
-  );
-  await client.query(
-    `UPDATE year_stats SET
-       guardias_anio = GREATEST(guardias_anio + $3, 0),
-       vi            = GREATEST(vi + $4, 0),
-       sa            = GREATEST(sa + $5, 0),
-       do_           = GREATEST(do_ + $6, 0)
-     WHERE user_id = $1 AND anio = $2`,
-    [userId, anio, guardiasAnio, vi, sa, doDelta],
-  );
+  return rows[0] || { guardias_anio: 0, vi: 0, sa: 0, do_: 0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -109,8 +100,8 @@ async function evaluarExceso(client, user, recibe, entrega) {
   if (!rk) return null; // día entre semana, no cuenta para límites
 
   const anio = yearOf(recibe);
-  const stat = await getYearStat(client, user.id, anio);
-  const actual = stat ? stat[COL[rk]] : 0;
+  const stat = await contarAnual(client, user.id, anio);
+  const actual = stat[COL[rk]];
   const cedeMismoTipo = entrega && weekendKey(entrega) === rk && yearOf(entrega) === anio;
   const nuevo = actual + 1 - (cedeMismoTipo ? 1 : 0);
 
@@ -262,39 +253,21 @@ async function ejecutarCambio(client, request, { confirmar = false } = {}) {
     );
   }
 
+  // Reasignar los Shift ES la actualización: los contadores se derivan
+  // del calendario, así que no hay nada más que mantener.
   if (request.tipo === 'cesion') {
-    // de → a en guardiaDe
     await reasignarShift(client, guardiaDe, deUser.id, aUser.id);
-    const yDe = yearOf(guardiaDe);
-    const kDe = weekendKey(guardiaDe);
-    await aplicarDeltaContador(client, deUser.id, yDe, {
-      guardiasAnio: -1, ...(kDe && deUser.aplica_limites ? { [kDe]: -1 } : {}),
-    });
-    await aplicarDeltaContador(client, aUser.id, yDe, {
-      guardiasAnio: +1, ...(kDe && aUser.aplica_limites ? { [kDe]: +1 } : {}),
-    });
   } else {
     // intercambio: de cede guardiaDe y recibe guardiaA; a al revés.
     await reasignarShift(client, guardiaDe, deUser.id, aUser.id);
     await reasignarShift(client, guardiaA, aUser.id, deUser.id);
-    const yDe = yearOf(guardiaDe);
-    const yA = yearOf(guardiaA);
-    const kDe = weekendKey(guardiaDe);
-    const kA = weekendKey(guardiaA);
-    // de: pierde guardiaDe, gana guardiaA
-    await aplicarDeltaContador(client, deUser.id, yDe, { guardiasAnio: -1, ...(kDe && deUser.aplica_limites ? { [kDe]: -1 } : {}) });
-    await aplicarDeltaContador(client, deUser.id, yA, { guardiasAnio: +1, ...(kA && deUser.aplica_limites ? { [kA]: +1 } : {}) });
-    // a: pierde guardiaA, gana guardiaDe
-    await aplicarDeltaContador(client, aUser.id, yA, { guardiasAnio: -1, ...(kA && aUser.aplica_limites ? { [kA]: -1 } : {}) });
-    await aplicarDeltaContador(client, aUser.id, yDe, { guardiasAnio: +1, ...(kDe && aUser.aplica_limites ? { [kDe]: +1 } : {}) });
   }
 
   return flag;
 }
 
 module.exports = {
-  getYearStat,
-  aplicarDeltaContador,
+  contarAnual,
   bloquearConsecutivos,
   evaluarExceso,
   validarReglas,

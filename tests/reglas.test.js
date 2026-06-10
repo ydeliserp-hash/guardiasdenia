@@ -32,10 +32,11 @@ const ok = (msg) => { pasados += 1; console.log('  ✓', msg); };
           const [userId, fecha] = params;
           return { rows: (shifts[userId] || []).includes(fecha) ? [{ ok: 1 }] : [] };
         }
-        if (sql.includes('FROM year_stats')) {
+        if (sql.includes('ISODOW')) {
+          // contarAnual: contadores derivados del calendario publicado
           const [userId, anio] = params;
           const s = (stats[userId] || {})[anio];
-          return { rows: s ? [{ user_id: userId, anio, vi: s.vi || 0, sa: s.sa || 0, do_: s.do || 0, guardias_anio: s.anio || 0 }] : [] };
+          return { rows: [{ guardias_anio: (s && s.anio) || 0, vi: (s && s.vi) || 0, sa: (s && s.sa) || 0, do_: (s && s.do) || 0 }] };
         }
         return { rows: [] };
       },

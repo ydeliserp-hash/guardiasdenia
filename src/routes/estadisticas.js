@@ -21,7 +21,8 @@ const statsQuery = z.object({
 
 // GET /estadisticas?anio=&mes=
 // Por residente: { mes, anio, vi, sa, do, flags } con ámbar(=8)/rojo(>8).
-// `mes` = guardias del mes (en vivo desde shifts). `anio` = total anual (contador).
+// TODO se deriva en vivo del calendario PUBLICADO: cargar planillas, editar
+// guardias o aprobar cambios actualiza las estadísticas automáticamente.
 router.get(
   '/',
   requireAuth,
@@ -34,7 +35,20 @@ router.get(
     const { rows: usuarios } = await query(
       'SELECT id, hace_guardias, aplica_limites FROM users WHERE activo = TRUE AND hace_guardias = TRUE ORDER BY id',
     );
-    const { rows: statRows } = await query('SELECT * FROM year_stats WHERE anio = $1', [anio]);
+
+    // Contadores anuales derivados de las guardias publicadas del año.
+    const { rows: statRows } = await query(
+      `SELECT s.user_id,
+              count(*)::int AS guardias_anio,
+              count(*) FILTER (WHERE EXTRACT(ISODOW FROM s.fecha) = 5)::int AS vi,
+              count(*) FILTER (WHERE EXTRACT(ISODOW FROM s.fecha) = 6)::int AS sa,
+              count(*) FILTER (WHERE EXTRACT(ISODOW FROM s.fecha) = 7)::int AS do_
+         FROM shifts s
+         JOIN month_plans p ON p.id = s.plan_id AND p.estado = 'publicado'
+        WHERE s.fecha >= make_date($1, 1, 1) AND s.fecha < make_date($1 + 1, 1, 1)
+        GROUP BY s.user_id`,
+      [anio],
+    );
     const statByUser = Object.fromEntries(statRows.map((s) => [s.user_id, s]));
     const conteoMes = await conteoGuardiasMes({ query }, anio, mes);
 
