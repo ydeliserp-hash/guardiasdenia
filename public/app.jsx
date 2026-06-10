@@ -234,10 +234,9 @@ function AppBar() {
   const { current, theme, toggleTheme, unread, go } = useApp();
   return (
     <header className="appbar">
-      <img className="appbar-logo" src="assets/logo-denia.png" alt="Dénia" />
+      <img className="appbar-logo" src="assets/logo-denia.png" alt="Hospital U. de Dénia" />
       <div style={{ minWidth: 0 }}>
         <h1 className="appbar-title">Guardias</h1>
-        <p className="appbar-sub">H. U. de Dénia</p>
       </div>
       <div className="appbar-spacer" />
       <button className="iconbtn" onClick={toggleTheme} aria-label="Tema">
