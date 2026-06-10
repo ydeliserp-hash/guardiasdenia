@@ -28,6 +28,16 @@ function applyFont(key) {
 // Aplica la letra guardada por el usuario al arrancar (Perfil → Apariencia).
 applyFont(localStorage.getItem('gd_font') || 'inter');
 
+// Tamaño de letra de la app (escala global del texto, sin tocar el diseño).
+const FONT_SIZES = { pequena: '92%', normal: '100%', grande: '112%', extra: '124%' };
+function applyFontSize(key) {
+  const v = FONT_SIZES[key] || '100%';
+  document.documentElement.style.webkitTextSizeAdjust = v;
+  document.documentElement.style.textSizeAdjust = v;
+}
+window.applyFontSize = applyFontSize;
+applyFontSize(localStorage.getItem('gd_fs') || 'normal');
+
 const ACCENTS = {
   '#1E3A5F': { l: '#1E3A5F', l7: '#16304F', d: '#6FA8DC', d7: '#8FBEE8', rl: '30,58,95', rd: '111,168,220' },
   '#0F766E': { l: '#0F766E', l7: '#0B5C55', d: '#5EC8BC', d7: '#7FD6CC', rl: '15,118,110', rd: '94,200,188' },

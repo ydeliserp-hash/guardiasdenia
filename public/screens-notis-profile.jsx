@@ -175,6 +175,20 @@ function ProfileScreen() {
     applyFont(id);
   }
 
+  // tamaño de letra (escala global, persistente)
+  const [tam, setTam] = useState(() => localStorage.getItem('gd_fs') || 'normal');
+  const TAMANOS = [
+    { id: 'pequena', label: 'A', px: 12, nombre: 'Pequeña' },
+    { id: 'normal', label: 'A', px: 14, nombre: 'Normal' },
+    { id: 'grande', label: 'A', px: 17, nombre: 'Grande' },
+    { id: 'extra', label: 'A', px: 20, nombre: 'Extra' },
+  ];
+  function cambiarTam(id) {
+    setTam(id);
+    localStorage.setItem('gd_fs', id);
+    applyFontSize(id);
+  }
+
   return (
     <div className="page-pad">
       <h2 className="page-title">Perfil</h2>
@@ -233,6 +247,20 @@ function ProfileScreen() {
                 style={{ fontFamily: ({ inter: "'Inter', sans-serif", sistema: 'system-ui, sans-serif', nunito: "'Nunito', sans-serif" })[fu.id] }}
                 onClick={() => cambiarFuente(fu.id)}>{fu.label}</button>
             ))}
+          </div>
+        </div>
+        <div className="set-divider" />
+        <div className="set-block">
+          <div className="set-label">Tamaño de letra</div>
+          <div className="seg">
+            {TAMANOS.map(t => (
+              <button key={t.id} className={tam === t.id ? 'on' : ''} title={t.nombre}
+                style={{ fontSize: t.px, fontWeight: 700, lineHeight: 1 }}
+                onClick={() => cambiarTam(t.id)}>{t.label}</button>
+            ))}
+          </div>
+          <div className="mini-note" style={{ marginTop: 6 }}>
+            {TAMANOS.find(t => t.id === tam).nombre}
           </div>
         </div>
       </div>
