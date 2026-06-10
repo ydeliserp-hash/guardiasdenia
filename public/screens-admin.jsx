@@ -20,6 +20,14 @@ function AdminScreen() {
   const usedColors = new Set(users.map(u => u.color));
 
   function reset() { setF({ nombre: '', dni: '', role: 'residente', anio: 'R1', color: null, limites: true }); }
+
+  // Elegir una opción cierra antes el teclado del móvil: si queda abierto,
+  // en iOS la hoja fija se descoloca y deja de responder al scroll.
+  function elegir(patch) {
+    const el = document.activeElement;
+    if (el && typeof el.blur === 'function') el.blur();
+    setF(prev => ({ ...prev, ...patch }));
+  }
   // El tutor no necesita color: no aparece en el calendario.
   const necesitaColor = f.role !== 'tutor';
   const completo = !!(f.nombre.trim() && f.dni.trim() && (!necesitaColor || f.color));
@@ -93,19 +101,19 @@ function AdminScreen() {
         <div className="field">
           <label className="field-label">Rol</label>
           <div className="seg">
-            {ROLES.map(r => <button key={r.id} className={f.role === r.id ? 'on' : ''} onClick={() => setF({ ...f, role: r.id })}>{r.label}</button>)}
+            {ROLES.map(r => <button key={r.id} className={f.role === r.id ? 'on' : ''} onClick={() => elegir({ role: r.id })}>{r.label}</button>)}
           </div>
         </div>
         {(f.role === 'residente' || f.role === 'r4') && (
           <div className="field">
             <label className="field-label">Año de residencia</label>
             <div className="seg">
-              {['R1', 'R2', 'R3', 'R4'].map(a => <button key={a} className={f.anio === a ? 'on' : ''} onClick={() => setF({ ...f, anio: a })}>{a}</button>)}
+              {['R1', 'R2', 'R3', 'R4'].map(a => <button key={a} className={f.anio === a ? 'on' : ''} onClick={() => elegir({ anio: a })}>{a}</button>)}
             </div>
           </div>
         )}
         {f.role === 'externo' && (
-          <button className="set-row plain" onClick={() => setF({ ...f, limites: !f.limites })}>
+          <button className="set-row plain" onClick={() => elegir({ limites: !f.limites })}>
             <span>Aplicar control de límites Vi/Sa/Do</span>
             <div className="set-toggle" data-on={f.limites}><span /></div>
           </button>
@@ -120,7 +128,7 @@ function AdminScreen() {
                 <button key={c} className={'swatch' + (f.color === c ? ' on' : '') + (used ? ' used' : '')}
                   disabled={used} title={used ? 'En uso' : GD.PASTEL_LABEL[c]}
                   style={{ background: GD.PASTELS[c] }}
-                  onClick={() => setF({ ...f, color: c })}>
+                  onClick={() => elegir({ color: c })}>
                   {f.color === c && <Icon name="check" size={16} style={{ color: '#1F2937' }} />}
                   {used && <Icon name="close" size={14} style={{ color: '#1F2937', opacity: .4 }} />}
                 </button>
