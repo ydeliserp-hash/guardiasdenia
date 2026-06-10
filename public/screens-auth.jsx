@@ -1,6 +1,41 @@
 /* ============================================================
    Auth — Login + Primer acceso + Crear contraseña (API real)
    ============================================================ */
+
+/* Campo de contraseña con botón para mostrar/ocultar (ojito) */
+function EyeIcon({ off }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+      {off && <line x1="4" y1="20" x2="20" y2="4" />}
+    </svg>
+  );
+}
+
+function PassInput({ value, onChange, error, autoComplete, onEnter }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{ position: 'relative' }}>
+      <input className={'input' + (error ? ' err' : '')} type={show ? 'text' : 'password'}
+        value={value} onChange={onChange} placeholder="••••••••"
+        autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete={autoComplete}
+        style={{ paddingRight: 48, boxSizing: 'border-box' }}
+        onKeyDown={e => { if (onEnter && e.key === 'Enter') onEnter(); }} />
+      <button type="button" onClick={() => setShow(s => !s)}
+        aria-label={show ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        style={{
+          position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
+          background: 'none', border: 'none', padding: 10, cursor: 'pointer',
+          color: 'var(--text-muted)', display: 'flex', alignItems: 'center',
+        }}>
+        <EyeIcon off={show} />
+      </button>
+    </div>
+  );
+}
+
 function AuthScreen() {
   const { loginOk, showToast } = useApp();
   const [mode, setMode] = useState('login'); // login | activar | crear
@@ -86,10 +121,8 @@ function AuthScreen() {
           </div>
           <div className="field">
             <label className="field-label">Contraseña</label>
-            <input className={'input' + (err.pass ? ' err' : '')} type="password" value={pass}
-              onChange={e => setPass(e.target.value)} placeholder="••••••••"
-              autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="current-password"
-              onKeyDown={e => { if (e.key === 'Enter') doLogin(); }} />
+            <PassInput value={pass} onChange={e => setPass(e.target.value)}
+              error={err.pass} autoComplete="current-password" onEnter={doLogin} />
             {err.pass && <div className="field-err">{err.pass}</div>}
           </div>
           <button className="btn btn-primary" disabled={busy} onClick={doLogin}>{busy ? 'Entrando…' : 'Entrar'}</button>
@@ -127,16 +160,14 @@ function AuthScreen() {
           <p className="sheet-sub">Al menos 6 caracteres: letras, números o una combinación. Se distingue entre mayúsculas y minúsculas. La usarás para entrar a partir de ahora.</p>
           <div className="field">
             <label className="field-label">Nueva contraseña</label>
-            <input className={'input' + (err.p1 ? ' err' : '')} type="password" value={p1}
-              onChange={e => setP1(e.target.value)} placeholder="••••••••"
-              autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="new-password" />
+            <PassInput value={p1} onChange={e => setP1(e.target.value)}
+              error={err.p1} autoComplete="new-password" />
             {err.p1 && <div className="field-err">{err.p1}</div>}
           </div>
           <div className="field">
             <label className="field-label">Repite la contraseña</label>
-            <input className={'input' + (err.p2 ? ' err' : '')} type="password" value={p2}
-              onChange={e => setP2(e.target.value)} placeholder="••••••••"
-              autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="new-password" />
+            <PassInput value={p2} onChange={e => setP2(e.target.value)}
+              error={err.p2} autoComplete="new-password" onEnter={doCrear} />
             {err.p2 && <div className="field-err">{err.p2}</div>}
           </div>
           <button className="btn btn-primary" disabled={busy} onClick={doCrear}>{busy ? 'Creando…' : 'Crear contraseña y entrar'}</button>
