@@ -136,7 +136,10 @@ function AdminScreen() {
             <ColorDot color={u.color} />
             <div className="row-main">
               <div className="row-title">{u.nombre}</div>
-              <div className="row-meta">DNI {u.dni}{u.pendiente_activacion && u.activation_code ? ` · código ${u.activation_code}` : ''}</div>
+              {/* sin DNI en el listado (protección de datos); se ve al abrir la ficha */}
+              {u.pendiente_activacion && u.activation_code
+                ? <div className="row-meta">Código de activación: {u.activation_code}</div>
+                : (u.role === 'residente' ? <div className="row-meta">{u.anio}</div> : null)}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
               <span className={'pill ' + (u.role === 'tutor' ? 'pill-blue' : u.role === 'externo' ? 'pill-muted' : 'pill-green')}>{ROLE_LABEL[u.role]}</span>
