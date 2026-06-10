@@ -13,7 +13,6 @@ function DayCell({ day, ids, dow, isToday, treatment, onClick }) {
   if (we) cls.push('we');
   if (isToday) cls.push('today');
   if (!ua) cls.push('empty-day');
-  if (ub && treatment === 'corners') cls.push('corners-mode');
 
   return (
     <button className={cls.join(' ')} onClick={onClick}>
@@ -41,12 +40,10 @@ function DayCell({ day, ids, dow, isToday, treatment, onClick }) {
         <div className="half half-bot" style={{ background: GD.pastel(ub) }}><span>{ub.ini}</span></div>
       </>)}
 
-      {/* two residents — corners treatment */}
-      {ua && ub && treatment === 'corners' && (<>
-        <div className="tri tri-a" style={{ background: GD.pastel(ua) }} />
-        <div className="tri tri-b" style={{ background: GD.pastel(ub) }} />
-        <span className="corner-pill a" style={{ background: GD.pastel(ua) }}>{ua.ini}</span>
-        <span className="corner-pill b" style={{ background: GD.pastel(ub) }}>{ub.ini}</span>
+      {/* two residents — fichas: recuadros delimitados apilados */}
+      {ua && ub && treatment === 'fichas' && (<>
+        <div className="ficha ficha-top" style={{ background: GD.pastel(ua) }}>{ua.ini}</div>
+        <div className="ficha ficha-bot" style={{ background: GD.pastel(ub) }}>{ub.ini}</div>
       </>)}
     </button>
   );
@@ -67,7 +64,7 @@ function CalendarScreen() {
 
   const shifts = schedule;
   const hayGuardias = Object.keys(shifts).length > 0;
-  const treat = ['diagonal', 'corners', 'split'].includes(calTreatment) ? calTreatment : 'diagonal';
+  const treat = ['diagonal', 'fichas', 'split'].includes(calTreatment) ? calTreatment : 'diagonal';
 
   const first = new Date(y, m, 1);
   const lead = (first.getDay() + 6) % 7; // Monday-based offset

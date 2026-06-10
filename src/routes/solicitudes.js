@@ -136,10 +136,19 @@ router.post(
         refRequestId: request.id,
       });
 
-      return request;
+      // El tutor se entera de TODA solicitud desde el primer momento.
+      await notificarTutores(client, {
+        titulo: `Nueva solicitud: ${esIntercambio ? 'intercambio' : 'cesión'} entre residentes`,
+        cuerpo: esIntercambio
+          ? `${req.user.nombre} propone a ${aUser.nombre} cambiar ${shortLabel(guardiaDe)} por ${shortLabel(guardiaA)}.`
+          : `${req.user.nombre} cede a ${aUser.nombre} la guardia del ${shortLabel(guardiaDe)}.`,
+        refRequestId: request.id,
+      });
+
+      return { request, aUserNombre: aUser.nombre };
     });
 
-    // Push al compañero destino (fuera de la transacción; nunca bloquea).
+    // Push (fuera de la transacción; nunca bloquea): al destino y a los tutores.
     await enviarPush(aUserId, {
       titulo: `${req.user.nombre} te propone ${tipo === 'intercambio' ? 'un intercambio' : 'una cesión'}`,
       cuerpo: tipo === 'intercambio'
@@ -147,8 +156,15 @@ router.post(
         : `Te cede la guardia del ${shortLabel(guardiaDe)}.`,
       url: '/',
     });
+    await enviarPushTutores({
+      titulo: `Nueva solicitud: ${tipo === 'intercambio' ? 'intercambio' : 'cesión'} entre residentes`,
+      cuerpo: tipo === 'intercambio'
+        ? `${req.user.nombre} propone a ${creada.aUserNombre} cambiar ${shortLabel(guardiaDe)} por ${shortLabel(guardiaA)}.`
+        : `${req.user.nombre} cede a ${creada.aUserNombre} la guardia del ${shortLabel(guardiaDe)}.`,
+      url: '/',
+    });
 
-    res.status(201).json(serializeRequest(creada));
+    res.status(201).json(serializeRequest(creada.request));
   }),
 );
 

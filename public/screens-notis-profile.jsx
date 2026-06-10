@@ -163,7 +163,7 @@ function ProfileScreen() {
 
   const treatments = [
     { id: 'diagonal', label: 'Diagonal', a: 'lucia', b: 'hugo' },
-    { id: 'corners', label: 'Esquinas', a: 'lucia', b: 'hugo' },
+    { id: 'fichas', label: 'Fichas', a: 'lucia', b: 'hugo' },
     { id: 'split', label: 'Cuadros', a: 'lucia', b: 'hugo' },
   ];
 
@@ -237,7 +237,9 @@ function ProfileScreen() {
               <button key={t.id} className={'treat' + (calTreatment === t.id ? ' on' : '')} onClick={() => setCalTreatment(t.id)}>
                 {t.id === 'split'
                   ? <span className="treat-split-ico"><i style={{ background: GD.pastel(GD.byId[t.a]) }} /><i style={{ background: GD.pastel(GD.byId[t.b]) }} /></span>
-                  : <MiniCell a={t.a} b={t.b} mode={t.id} size={42} />}
+                  : t.id === 'fichas'
+                    ? <span className="treat-fichas-ico"><i style={{ background: GD.pastel(GD.byId[t.a]) }} /><i style={{ background: GD.pastel(GD.byId[t.b]) }} /></span>
+                    : <MiniCell a={t.a} b={t.b} mode={t.id} size={42} />}
                 <span>{t.label}</span>
               </button>
             ))}

@@ -463,7 +463,7 @@ function TweaksBridge() {
   useEffect(() => { if (t.cell && t.cell !== calTreatment) setCalTreatment(t.cell); }, []); // eslint-disable-line
   const cellOpts = [
     { value: 'diagonal', label: 'Diagonal' },
-    { value: 'corners', label: 'Esquinas' },
+    { value: 'fichas', label: 'Fichas' },
     { value: 'split', label: 'Cuadros' },
   ];
   const fontOpts = [
