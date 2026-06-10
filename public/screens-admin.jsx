@@ -33,6 +33,14 @@ function AdminScreen() {
     const el = document.activeElement;
     if (el && typeof el.blur === 'function') el.blur();
   }
+  async function copiarCodigo(codigo) {
+    try {
+      await navigator.clipboard.writeText(codigo);
+      showToast('Código copiado: ' + codigo);
+    } catch (e) {
+      showToast('No se pudo copiar; mantén pulsado el código para copiarlo', 'warn');
+    }
+  }
   function elegir(patch) { cerrarTeclado(); setF(prev => ({ ...prev, ...patch })); }
   function elegirE(patch) { cerrarTeclado(); setFe(prev => ({ ...prev, ...patch })); }
 
@@ -147,7 +155,10 @@ function AdminScreen() {
               <div className="row-title">{u.nombre}</div>
               {/* sin DNI en el listado (protección de datos); se ve al abrir la ficha */}
               {u.pendiente_activacion && u.activation_code
-                ? <div className="row-meta">Código de activación: {u.activation_code}</div>
+                ? <div className="row-meta" style={{ cursor: 'pointer' }}
+                    onClick={(e) => { e.stopPropagation(); copiarCodigo(u.activation_code); }}>
+                    Código: <b>{u.activation_code}</b> · <span style={{ color: 'var(--accent)' }}>copiar</span>
+                  </div>
                 : (u.role === 'residente' ? <div className="row-meta">{u.anio}</div> : null)}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
@@ -236,7 +247,8 @@ function AdminScreen() {
             {created.activation_code}
           </p>
           <p className="dlg-text">Entrégaselo para su primer acceso (DNI + código). No caduca y solo puede usarse una vez. También podrás verlo en la lista de usuarios mientras no lo use.</p>
-          <button className="btn btn-primary" onClick={() => setCreated(null)}>Entendido</button>
+          <button className="btn btn-secondary" onClick={() => copiarCodigo(created.activation_code)}>Copiar código</button>
+          <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={() => setCreated(null)}>Entendido</button>
         </>)}
       </Dialog>
 
