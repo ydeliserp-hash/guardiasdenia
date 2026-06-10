@@ -201,13 +201,15 @@
 
 /* ---------- Vista "Fichas": cada residente en su recuadro delimitado ---------- */
 .ficha {
-  position: absolute; left: 4px; right: 4px; z-index: 2;
-  height: calc(50% - 7px);
-  border-radius: 9px;
+  position: absolute; left: 3px; right: 3px; z-index: 2;
+  /* deja libre la franja superior para el número del día */
+  height: calc(50% - 11px);
+  border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 800; color: var(--pastel-ink); letter-spacing: -0.3px;
+  font-size: 10.5px; font-weight: 800; color: var(--pastel-ink); letter-spacing: -0.3px;
+  line-height: 1;
   box-shadow: inset 0 0 0 1.5px rgba(0,0,0,0.10);
 }
-.ficha-top { top: 4px; }
-.ficha-bot { bottom: 4px; }
-.app-root.mobile-full .ficha { font-size: 13px; }
+.ficha-top { top: 17px; }
+.ficha-bot { bottom: 3px; }
+.app-root.mobile-full .ficha { font-size: 12px; }
