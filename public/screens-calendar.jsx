@@ -166,7 +166,7 @@ function CalendarScreen() {
         {GD.DOW.map((d, i) => <div key={d} className={i >= 4 ? 'we' : ''}>{d}</div>)}
       </div>
 
-      <div className="grid">
+      <div className="grid" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {cells.map((d, i) => d === null
           ? <div key={'e' + i} />
           : <DayCell key={d} day={d} ids={shifts[d] || []} dow={dowFor(d)}
