@@ -78,6 +78,12 @@ function AppProvider({ children }) {
   const [calY, setCalY] = useState(hoy.getFullYear());
   const [calM, setCalM] = useState(hoy.getMonth()); // 0-indexado
 
+  // fondo del documento acorde al tema (evita franjas blancas en los bordes/rebote)
+  useEffect(() => {
+    document.body.setAttribute('data-stage', theme);
+    document.documentElement.style.backgroundColor = theme === 'dark' ? '#0D1318' : '#DDE3EA';
+  }, [theme]);
+
   const [reqSeed, setReqSeed] = useState(null); // {fromDay, mode} to preload Cambios flow
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 900);
   useEffect(() => {

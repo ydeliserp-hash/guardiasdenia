@@ -794,3 +794,6 @@ button, .cell, .row, .noti, .set-row, .daychip, .assign-chip, .swatch,
 .btn:active:not(:disabled), .botnav-item:active, .iconbtn:active,
 .cal-navbtn:active, .set-row:active, .admin-cta:active { opacity: .7; }
 .cell:active, .daychip:active, .assign-chip:active, .mine-chip:active { opacity: .8; }
+
+/* puntos de color visibles también sin color (históricos) y en oscuro */
+.chip-dot { box-shadow: inset 0 0 0 1.5px var(--border-strong); }

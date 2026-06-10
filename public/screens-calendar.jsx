@@ -8,6 +8,8 @@ const DOW_FULL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado
 function DayCell({ day, ids, dow, isToday, treatment, onClick }) {
   const we = dow >= 4; // Vie/Sáb/Dom
   const desconocido = (id) => ({ id, nombre: 'Residente', ini: '·', color: null, anio: '' });
+  // históricos/sin color: la celda es gris del tema → iniciales con texto del tema
+  const tinta = (u) => (u && u.color ? undefined : { color: 'var(--text-muted)' });
   const ua = ids[0] ? (GD.byId[ids[0]] || desconocido(ids[0])) : null;
   const ub = ids[1] ? (GD.byId[ids[1]] || desconocido(ids[1])) : null;
   const cls = ['cell'];
@@ -23,7 +25,7 @@ function DayCell({ day, ids, dow, isToday, treatment, onClick }) {
       {/* single resident */}
       {ua && !ub && (
         <div className="fill-1" style={{ background: GD.pastel(ua) }}>
-          <span className="ini">{ua.ini}</span>
+          <span className="ini" style={tinta(ua)}>{ua.ini}</span>
         </div>
       )}
 
@@ -32,20 +34,20 @@ function DayCell({ day, ids, dow, isToday, treatment, onClick }) {
         <div className="tri tri-a" style={{ background: GD.pastel(ua) }} />
         <div className="tri tri-b" style={{ background: GD.pastel(ub) }} />
         {treatment === 'seam' && <div className="seam" style={{ transform: 'rotate(45deg)' }} />}
-        <span className="tri-ini a">{ua.ini}</span>
-        <span className="tri-ini b">{ub.ini}</span>
+        <span className="tri-ini a" style={tinta(ua)}>{ua.ini}</span>
+        <span className="tri-ini b" style={tinta(ub)}>{ub.ini}</span>
       </>)}
 
       {/* two residents — cuadros (horizontal halves) */}
       {ua && ub && treatment === 'split' && (<>
-        <div className="half half-top" style={{ background: GD.pastel(ua) }}><span>{ua.ini}</span></div>
-        <div className="half half-bot" style={{ background: GD.pastel(ub) }}><span>{ub.ini}</span></div>
+        <div className="half half-top" style={{ background: GD.pastel(ua) }}><span style={tinta(ua)}>{ua.ini}</span></div>
+        <div className="half half-bot" style={{ background: GD.pastel(ub) }}><span style={tinta(ub)}>{ub.ini}</span></div>
       </>)}
 
       {/* two residents — fichas: recuadros delimitados apilados */}
       {ua && ub && treatment === 'fichas' && (<>
-        <div className="ficha ficha-top" style={{ background: GD.pastel(ua) }}>{ua.ini}</div>
-        <div className="ficha ficha-bot" style={{ background: GD.pastel(ub) }}>{ub.ini}</div>
+        <div className="ficha ficha-top" style={{ background: GD.pastel(ua), ...(tinta(ua) || {}) }}>{ua.ini}</div>
+        <div className="ficha ficha-bot" style={{ background: GD.pastel(ub), ...(tinta(ub) || {}) }}>{ub.ini}</div>
       </>)}
     </button>
   );
