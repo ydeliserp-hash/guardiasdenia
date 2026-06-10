@@ -26,10 +26,13 @@ const intervalHoras = (h) => `now() - interval '${h} hours'`;
 const intervalMin = (m) => `now() - interval '${m} minutes'`;
 
 function build() {
-  const schema = fs.readFileSync(
-    path.join(__dirname, 'migrations', '001_init.sql'),
-    'utf8',
-  );
+  // Concatena TODAS las migraciones en orden (001, 002, ...).
+  const dir = path.join(__dirname, 'migrations');
+  const schema = fs.readdirSync(dir)
+    .filter((f) => f.endsWith('.sql'))
+    .sort()
+    .map((f) => fs.readFileSync(path.join(dir, f), 'utf8').trim())
+    .join('\n\n');
   const hash = bcrypt.hashSync(env.seedPassword, 10);
   const reqByKey = Object.fromEntries(REQUESTS.map((r) => [r.key, r.id]));
 

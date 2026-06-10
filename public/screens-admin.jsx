@@ -20,8 +20,12 @@ function AdminScreen() {
   const usedColors = new Set(users.map(u => u.color));
 
   function reset() { setF({ nombre: '', dni: '', role: 'residente', anio: 'R1', color: null, limites: true }); }
+  // El tutor no necesita color: no aparece en el calendario.
+  const necesitaColor = f.role !== 'tutor';
+  const completo = !!(f.nombre.trim() && f.dni.trim() && (!necesitaColor || f.color));
+
   async function save() {
-    if (!f.nombre.trim() || !f.dni.trim() || !f.color) { showToast('Completa nombre, DNI y color', 'warn'); return; }
+    if (!completo) { showToast(necesitaColor ? 'Completa nombre, DNI y color' : 'Completa nombre y DNI', 'warn'); return; }
     setSaving(true);
     try {
       const nuevo = await API.altaUsuario({
@@ -29,7 +33,7 @@ function AdminScreen() {
         dni: f.dni.trim().toUpperCase(),
         role: f.role,
         anio: f.role === 'externo' ? 'Externo' : f.role === 'tutor' ? 'Tutora' : f.anio,
-        color: f.color,
+        color: necesitaColor ? f.color : undefined,
         aplica_limites: f.role === 'externo' ? f.limites : true,
       });
       await syncUsers();
@@ -106,6 +110,7 @@ function AdminScreen() {
             <div className="set-toggle" data-on={f.limites}><span /></div>
           </button>
         )}
+        {necesitaColor && (
         <div className="field" style={{ marginTop: 6 }}>
           <label className="field-label">Color asignado</label>
           <div className="color-grid">
@@ -124,18 +129,19 @@ function AdminScreen() {
           </div>
           <div className="mini-note" style={{ marginTop: 8 }}>Los colores en uso aparecen deshabilitados.</div>
         </div>
+        )}
         {/* Botón final siempre visible (fijo al pie de la hoja), activo al completar los datos */}
         <div style={{
           position: 'sticky', bottom: 0, margin: '14px -18px 0', padding: '12px 18px 4px',
           background: 'var(--surface)', boxShadow: '0 -10px 14px -12px rgba(0,0,0,0.25)',
         }}>
           <button className="btn btn-primary" style={{ width: '100%' }}
-            disabled={saving || !(f.nombre.trim() && f.dni.trim() && f.color)} onClick={save}>
+            disabled={saving || !completo} onClick={save}>
             <Icon name="check" size={17} /> {saving ? 'Creando…' : 'Aceptar'}
           </button>
-          {!(f.nombre.trim() && f.dni.trim() && f.color) && (
+          {!completo && (
             <div className="mini-note" style={{ textAlign: 'center', marginTop: 6 }}>
-              Completa nombre, DNI y color para continuar.
+              {necesitaColor ? 'Completa nombre, DNI y color para continuar.' : 'Completa nombre y DNI para continuar.'}
             </div>
           )}
         </div>

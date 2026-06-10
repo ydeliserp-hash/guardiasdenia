@@ -10,7 +10,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { errores } = require('../utils/errors');
 const { esAdmin, getPlan, getOrCreatePlan, mapaGuardiasMes } = require('../services/calendar');
 const { registrarAuditoria } = require('../services/audit');
-const { isValidISODate, yearOf, monthOf, toISODate } = require('../utils/dates');
+const { isValidISODate, yearOf, monthOf, toISODate, addDays, shortLabel } = require('../utils/dates');
 
 const router = express.Router();
 
@@ -39,9 +39,10 @@ router.get(
 );
 
 // PUT /guardias/:fecha  (r4/tutor)  → asigna hasta 2 residentes a un día.
-// NOTA: la edición manual de la planilla NO aplica las reglas duras
-// (límites Vi/Sa/Do ni días consecutivos); esas reglas solo rigen los
-// cambios/cesiones entre residentes. Sí se respeta el máximo de 2 por día.
+// La prohibición de DÍAS CONSECUTIVOS es absoluta y se aplica también aquí:
+// ni R4 ni tutor pueden dejar a un residente con guardias en días seguidos
+// (cruza meses). Los límites Vi/Sa/Do no bloquean la planilla (solo los
+// cambios/cesiones), pero el máximo de 2 por día sí se respeta.
 router.put(
   '/:fecha',
   requireAuth,
@@ -61,9 +62,10 @@ router.put(
 
     const resultado = await withTransaction(async (client) => {
       // Valida que los usuarios existan, estén activos y hagan guardias.
+      const nombres = {};
       if (userIds.length) {
         const { rows: validos } = await client.query(
-          'SELECT id, hace_guardias, activo FROM users WHERE id = ANY($1)',
+          'SELECT id, nombre, hace_guardias, activo FROM users WHERE id = ANY($1)',
           [userIds],
         );
         const byId = Object.fromEntries(validos.map((u) => [u.id, u]));
@@ -71,6 +73,25 @@ router.put(
           const u = byId[id];
           if (!u || !u.activo) throw errores.validacion(`El usuario ${id} no existe o está dado de baja.`);
           if (!u.hace_guardias) throw errores.validacion(`El usuario ${id} no hace guardias.`);
+          nombres[id] = u.nombre;
+        }
+      }
+
+      // REGLA DURA: ningún residente puede quedar con guardia en días
+      // consecutivos, tampoco al editar la planilla (cruza meses).
+      const diaAnterior = addDays(fecha, -1);
+      const diaSiguiente = addDays(fecha, 1);
+      for (const uid of userIds) {
+        const { rows: vecinos } = await client.query(
+          'SELECT fecha FROM shifts WHERE user_id = $1 AND fecha = ANY($2::date[])',
+          [uid, [diaAnterior, diaSiguiente]],
+        );
+        if (vecinos.length) {
+          const dias = vecinos.map((v) => shortLabel(toISODate(v.fecha))).join(' y ');
+          throw errores.reglaNegocio(
+            `No permitido: ${nombres[uid]} quedaría con guardias en días consecutivos `
+            + `(${shortLabel(fecha)} junto a ${dias}). La prohibición de días seguidos es absoluta.`,
+          );
         }
       }
 

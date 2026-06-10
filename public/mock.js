@@ -14,11 +14,14 @@
     lavanda:   'var(--p-lavanda)',
     lila:      'var(--p-lila)',
     coral:     'var(--p-coral)',
+    turquesa:  'var(--p-turquesa)',
+    arena:     'var(--p-arena)',
   };
-  const PASTEL_ORDER = ['rosa','melocoton','amarillo','menta','salvia','cielo','bebe','lavanda','lila','coral'];
+  const PASTEL_ORDER = ['rosa','melocoton','amarillo','menta','salvia','cielo','bebe','lavanda','lila','coral','turquesa','arena'];
   const PASTEL_LABEL = {
     rosa:'Rosa', melocoton:'Melocotón', amarillo:'Amarillo', menta:'Menta', salvia:'Salvia',
     cielo:'Azul cielo', bebe:'Azul bebé', lavanda:'Lavanda', lila:'Lila', coral:'Coral',
+    turquesa:'Turquesa', arena:'Arena',
   };
 
   // role: tutor | r4 | residente | externo
@@ -133,7 +136,7 @@
   const DOW = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 
   function initials(u){ return u ? u.ini : '·'; }
-  function pastel(u){ return u ? PASTELS[u.color] : 'var(--surface-3)'; }
+  function pastel(u){ return (u && PASTELS[u.color]) ? PASTELS[u.color] : 'var(--surface-3)'; }
 
   window.GD = {
     PASTELS, PASTEL_ORDER, PASTEL_LABEL,

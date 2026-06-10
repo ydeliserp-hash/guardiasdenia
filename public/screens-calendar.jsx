@@ -80,6 +80,25 @@ function CalendarScreen() {
   const prev = () => { if (m === 0) { setM(11); setY(y - 1); } else setM(m - 1); };
   const next = () => { if (m === 11) { setM(0); setY(y + 1); } else setM(m + 1); };
 
+  // Deslizar el dedo sobre el calendario para cambiar de mes (móvil)
+  const touchRef = useRef(null);
+  const onTouchStart = (e) => {
+    const t = e.touches[0];
+    touchRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e) => {
+    const inicio = touchRef.current;
+    touchRef.current = null;
+    if (!inicio) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - inicio.x;
+    const dy = t.clientY - inicio.y;
+    // gesto claramente horizontal y suficientemente largo
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) next(); else prev();
+    }
+  };
+
   const dowFor = (d) => (new Date(y, m, d).getDay() + 6) % 7;
   const fechaLabel = (d) => `${GD.DOW[dowFor(d)]} ${d} ${GD.MONTHS[m]}`;
 
@@ -103,6 +122,14 @@ function CalendarScreen() {
   function assignResident(uid) {
     const cur = schedule[assignOpen] ? [...schedule[assignOpen]] : [];
     const i = cur.indexOf(uid);
+    if (i < 0) {
+      // REGLA DURA: nunca guardias en días consecutivos (también en planilla).
+      const vecinos = [...(schedule[assignOpen - 1] || []), ...(schedule[assignOpen + 1] || [])];
+      if (vecinos.includes(uid)) {
+        showToast(`${GD.byId[uid].nombre.split(' ')[0]} tendría guardias en días consecutivos — no permitido`, 'err');
+        return;
+      }
+    }
     if (i >= 0) cur.splice(i, 1);
     else if (cur.length < 2) cur.push(uid);
     else { showToast('Máximo 2 residentes por día', 'warn'); return; }

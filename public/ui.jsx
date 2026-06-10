@@ -44,7 +44,7 @@ function Avatar({ user, size = 38 }) {
 }
 
 function ColorDot({ color }) {
-  return <span className="chip-dot" style={{ background: GD.PASTELS[color] }} />;
+  return <span className="chip-dot" style={{ background: GD.PASTELS[color] || 'var(--surface-3)' }} />;
 }
 
 /* mini diagonal cell preview (for legend / treatment picker) */

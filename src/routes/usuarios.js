@@ -14,7 +14,7 @@ const { registrarAuditoria } = require('../services/audit');
 
 const router = express.Router();
 
-const COLORES = ['rosa', 'melocoton', 'amarillo', 'menta', 'salvia', 'cielo', 'bebe', 'lavanda', 'lila', 'coral'];
+const COLORES = ['rosa', 'melocoton', 'amarillo', 'menta', 'salvia', 'cielo', 'bebe', 'lavanda', 'lila', 'coral', 'turquesa', 'arena'];
 const ROLES = ['tutor', 'r4', 'residente', 'externo'];
 
 const altaSchema = z.object({
@@ -23,9 +23,13 @@ const altaSchema = z.object({
   dni: z.string().trim().min(1, 'El DNI es obligatorio.'),
   role: z.enum(ROLES),
   anio: z.string().trim().min(1, 'El año/etiqueta de residencia es obligatorio.'),
-  color: z.enum(COLORES, { errorMap: () => ({ message: `Color inválido. Debe ser uno de: ${COLORES.join(', ')}.` }) }),
+  // El tutor no necesita color (no sale en el calendario); el resto sí.
+  color: z.enum(COLORES, { errorMap: () => ({ message: `Color inválido. Debe ser uno de: ${COLORES.join(', ')}.` }) }).optional(),
   aplica_limites: z.boolean().optional(),
   hace_guardias: z.boolean().optional(),
+}).refine((d) => d.role === 'tutor' || !!d.color, {
+  message: 'El color es obligatorio (excepto para el tutor).',
+  path: ['color'],
 });
 
 const editarSchema = z.object({
@@ -89,7 +93,9 @@ router.post(
   requireRole('r4', 'tutor'),
   validate(altaSchema),
   asyncHandler(async (req, res) => {
-    const { nombre, dni, role, anio, color } = req.body;
+    const { nombre, dni, role, anio } = req.body;
+    // El tutor se crea sin color (no aparece en el calendario).
+    const color = role === 'tutor' ? null : req.body.color;
     const trato = req.body.trato || nombre;
     const iniciales = derivarIniciales(nombre);
     // El tutor no hace guardias; el resto sí por defecto.
@@ -99,7 +105,7 @@ router.post(
     const codigo = generarCodigo();
 
     const creado = await withTransaction(async (client) => {
-      if (await colorOcupado(client, color)) {
+      if (color && await colorOcupado(client, color)) {
         throw errores.conflicto(`El color "${color}" ya está en uso por otro usuario activo.`);
       }
       const { rows: dniRows } = await client.query('SELECT 1 FROM users WHERE dni = $1', [dni]);
