@@ -753,3 +753,18 @@
   /* hueco para la barra de inicio del iPhone */
   padding-bottom: calc(12px + env(safe-area-inset-bottom, 10px));
 }
+
+/* ---------- Móvil: hojas y diálogos a pantalla completa + scroll fiable ---------- */
+.app-root.mobile-full .scrim {
+  position: fixed;   /* cubre toda la pantalla, también la barra de pestañas */
+  inset: 0;
+  z-index: 300;
+}
+.app-root.mobile-full .sheet {
+  max-height: 88dvh;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 26px);
+}
+.sheet {
+  -webkit-overflow-scrolling: touch; /* inercia de scroll en iOS */
+  overscroll-behavior: contain;      /* el gesto no se escapa a la página de detrás */
+}
