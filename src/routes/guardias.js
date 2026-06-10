@@ -61,7 +61,16 @@ router.put(
     }
 
     const resultado = await withTransaction(async (client) => {
-      // Valida que los usuarios existan, estén activos y hagan guardias.
+      // Estado anterior (para auditoría y para distinguir altas de retenciones).
+      const { rows: antesRows } = await client.query(
+        'SELECT user_id FROM shifts WHERE fecha = $1 ORDER BY slot',
+        [fecha],
+      );
+      const antes = antesRows.map((r) => r.user_id);
+
+      // Valida que los usuarios existan. Estar activo y hacer guardias solo
+      // se exige a los AÑADIDOS nuevos: mantener (o quitar) a alguien que ya
+      // estaba ese día —aunque esté de baja— siempre debe ser posible.
       const nombres = {};
       if (userIds.length) {
         const { rows: validos } = await client.query(
@@ -71,17 +80,20 @@ router.put(
         const byId = Object.fromEntries(validos.map((u) => [u.id, u]));
         for (const id of userIds) {
           const u = byId[id];
-          if (!u || !u.activo) throw errores.validacion(`El usuario ${id} no existe o está dado de baja.`);
-          if (!u.hace_guardias) throw errores.validacion(`El usuario ${id} no hace guardias.`);
+          if (!u) throw errores.validacion(`El usuario ${id} no existe.`);
           nombres[id] = u.nombre;
+          if (antes.includes(id)) continue; // ya estaba: se puede conservar
+          if (!u.activo) throw errores.validacion(`${u.nombre} está dado de baja y no puede recibir guardias nuevas.`);
+          if (!u.hace_guardias) throw errores.validacion(`${u.nombre} no hace guardias.`);
         }
       }
 
       // REGLA DURA: ningún residente puede quedar con guardia en días
       // consecutivos, tampoco al editar la planilla (cruza meses).
+      // Solo se comprueba a los añadidos nuevos (los retenidos ya estaban).
       const diaAnterior = addDays(fecha, -1);
       const diaSiguiente = addDays(fecha, 1);
-      for (const uid of userIds) {
+      for (const uid of userIds.filter((id) => !antes.includes(id))) {
         const { rows: vecinos } = await client.query(
           'SELECT fecha FROM shifts WHERE user_id = $1 AND fecha = ANY($2::date[])',
           [uid, [diaAnterior, diaSiguiente]],
@@ -98,13 +110,6 @@ router.put(
       const anio = yearOf(fecha);
       const mes = monthOf(fecha);
       const plan = await getOrCreatePlan(client, anio, mes);
-
-      // Estado anterior (para auditoría).
-      const { rows: antesRows } = await client.query(
-        'SELECT user_id FROM shifts WHERE fecha = $1 ORDER BY slot',
-        [fecha],
-      );
-      const antes = antesRows.map((r) => r.user_id);
 
       // Reemplaza la asignación del día.
       await client.query('DELETE FROM shifts WHERE fecha = $1', [fecha]);

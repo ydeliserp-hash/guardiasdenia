@@ -146,4 +146,32 @@ router.post(
   }),
 );
 
+// POST /planes/:anio/:mes/vaciar  (r4/tutor)  elimina TODAS las guardias del mes.
+// Pensado para limpiar planillas de prueba o rehacer un mes desde cero.
+router.post(
+  '/:anio/:mes/vaciar',
+  requireAuth,
+  requireRole('r4', 'tutor'),
+  validate(anioMesParams, 'params'),
+  asyncHandler(async (req, res) => {
+    const { anio, mes } = req.params;
+    const eliminadas = await withTransaction(async (client) => {
+      const { inicio, finExclusivo } = rangoMes(anio, mes);
+      const { rowCount } = await client.query(
+        'DELETE FROM shifts WHERE fecha >= $1 AND fecha < $2',
+        [inicio, finExclusivo],
+      );
+      await registrarAuditoria(client, {
+        entidad: 'guardia',
+        entidadId: `${anio}-${String(mes).padStart(2, '0')}`,
+        accion: 'asignacion_guardia',
+        actorId: req.user.id,
+        detalle: { mes_vaciado: true, anio, mes, guardias_eliminadas: rowCount },
+      });
+      return rowCount;
+    });
+    res.json({ ok: true, eliminadas, mensaje: `Se han eliminado ${eliminadas} guardias de ${MESES[mes - 1]} ${anio}.` });
+  }),
+);
+
 module.exports = router;

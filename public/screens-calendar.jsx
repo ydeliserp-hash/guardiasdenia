@@ -56,6 +56,22 @@ function CalendarScreen() {
   const [m, setM] = useState(calM); // 0-indexed
   const [open, setOpen] = useState(null); // day number
   const [assignOpen, setAssignOpen] = useState(null);
+  const [confirmVaciar, setConfirmVaciar] = useState(false);
+  const [vaciando, setVaciando] = useState(false);
+
+  async function vaciarMesActual() {
+    setVaciando(true);
+    try {
+      const r = await API.vaciarMes(y, m + 1);
+      await loadMonth(y, m);
+      setConfirmVaciar(false);
+      showToast(r.mensaje || 'Mes vaciado', 'warn');
+    } catch (e) {
+      showToast(e.message, 'err');
+    } finally {
+      setVaciando(false);
+    }
+  }
 
   // al cambiar de mes, carga sus guardias desde la API
   useEffect(() => {
@@ -255,6 +271,22 @@ function CalendarScreen() {
           Volver a borrador
         </button>
       )}
+      {isStaff && editMode && hayGuardias && (
+        <button className="btn btn-ghost btn-sm" style={{ width: '100%', marginTop: 8, color: 'var(--red-text)' }}
+          onClick={() => setConfirmVaciar(true)}>
+          Vaciar todas las guardias de {GD.MONTHS[m]}…
+        </button>
+      )}
+
+      {/* Confirmación de vaciado del mes */}
+      <Dialog open={confirmVaciar} onClose={() => setConfirmVaciar(false)}>
+        <h3 className="dlg-title">¿Vaciar {GD.MONTHS[m]} {y}?</h3>
+        <p className="dlg-text">Se eliminarán <b>todas las guardias del mes</b>. Útil para limpiar datos de prueba o rehacer la planilla desde cero. Esta acción no se puede deshacer.</p>
+        <button className="btn btn-danger" disabled={vaciando} onClick={vaciarMesActual}>
+          {vaciando ? 'Vaciando…' : 'Sí, vaciar el mes'}
+        </button>
+        <button className="btn btn-ghost" style={{ marginTop: 6 }} onClick={() => setConfirmVaciar(false)}>Cancelar</button>
+      </Dialog>
 
       {/* legend */}
       {presentIds.length > 0 && (
@@ -316,20 +348,30 @@ function CalendarScreen() {
         title={assignOpen ? fechaLabel(assignOpen) : ''}
         sub="Asigna hasta 2 residentes a este día">
         <div className="assign-grid">
-          {GD.USERS.filter(u => u.guardias && u.activo !== false).map(u => {
-            const on = (schedule[assignOpen] || []).includes(u.id);
-            return (
-              <button key={u.id} className={'assign-chip' + (on ? ' on' : '')}
-                onClick={() => assignResident(u.id)}>
-                <Avatar user={u} size={30} />
-                <div style={{ minWidth: 0 }}>
-                  <div className="nm">{u.nombre.split(' ')[0]}</div>
-                  <div className="rl">{u.anio}</div>
-                </div>
-                {on && <Icon name="check" size={16} style={{ marginLeft: 'auto', color: 'var(--accent)' }} />}
-              </button>
-            );
-          })}
+          {(() => {
+            // activos que hacen guardias + los YA asignados a este día aunque
+            // estén de baja (para poder quitarlos)
+            const elegibles = GD.USERS.filter(u => u.guardias && u.activo !== false);
+            const asignados = schedule[assignOpen] || [];
+            const extra = asignados
+              .filter(id => !elegibles.some(u => u.id === id))
+              .map(id => GD.byId[id] || { id, nombre: '(baja)', ini: '·', color: null, anio: '' });
+            return [...extra, ...elegibles].map(u => {
+              const on = asignados.includes(u.id);
+              const deBaja = u.activo === false || !GD.byId[u.id];
+              return (
+                <button key={u.id} className={'assign-chip' + (on ? ' on' : '')}
+                  onClick={() => assignResident(u.id)}>
+                  <Avatar user={u} size={30} />
+                  <div style={{ minWidth: 0 }}>
+                    <div className="nm">{u.nombre.split(' ')[0]}{deBaja ? ' (baja)' : ''}</div>
+                    <div className="rl">{u.anio}</div>
+                  </div>
+                  {on && <Icon name="check" size={16} style={{ marginLeft: 'auto', color: 'var(--accent)' }} />}
+                </button>
+              );
+            });
+          })()}
         </div>
         <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setAssignOpen(null)}>Hecho</button>
       </Sheet>
