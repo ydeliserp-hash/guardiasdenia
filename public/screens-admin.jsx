@@ -241,10 +241,10 @@ function AdminScreen() {
       </Dialog>
 
       {/* Edición de un usuario existente */}
-      <Sheet open={!!editing} onClose={() => setEditing(null)}
+      <Sheet open={!!editing} onClose={() => { setEditing(null); setFe(null); }}
         title={editing ? `Editar a ${editing.nombre.split(' ')[0]}` : ''}
         sub="Corrige los datos del usuario. Los cambios quedan registrados en el histórico.">
-        {fe && (<>
+        {fe && editing && (<>
           <div className="field">
             <label className="field-label">Nombre completo</label>
             <input className="input" value={fe.nombre} onChange={e => setFe({ ...fe, nombre: e.target.value })} />

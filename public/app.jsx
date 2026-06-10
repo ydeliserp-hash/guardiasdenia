@@ -333,6 +333,8 @@ class Guardian extends React.Component {
   componentDidCatch(error, info) { console.error('Error de pantalla:', error, info); }
   render() {
     if (this.state.error) {
+      const e = this.state.error;
+      const detalle = (e && (e.message || String(e))) + '\n' + ((e && e.stack) || '').split('\n').slice(1, 4).join('\n');
       return (
         <div className="page-pad" style={{ paddingTop: 48, textAlign: 'center' }}>
           <h2 className="page-title">Vaya, algo ha fallado</h2>
@@ -341,6 +343,13 @@ class Guardian extends React.Component {
             onClick={() => { this.setState({ error: null }); this.props.onReset && this.props.onReset(); }}>
             Volver al calendario
           </button>
+          {/* detalle técnico: haz captura de esto si vuelve a pasar */}
+          <div className="mini-note" style={{
+            marginTop: 18, textAlign: 'left', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+            background: 'var(--surface)', borderRadius: 12, padding: '10px 12px', fontSize: 11,
+          }}>
+            {detalle}
+          </div>
         </div>
       );
     }
