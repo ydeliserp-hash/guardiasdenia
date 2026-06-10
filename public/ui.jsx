@@ -63,18 +63,27 @@ function MiniCell({ a, b, mode = 'diagonal', size = 30 }) {
   );
 }
 
+/* Capa superior: las hojas/diálogos se montan al final de .app-root para
+   quedar SIEMPRE por encima de la barra de pestañas (sin guerras de z-index). */
+function Overlay({ children }) {
+  const host = document.getElementById('overlay-root');
+  return host ? ReactDOM.createPortal(children, host) : children;
+}
+
 /* Bottom sheet */
 function Sheet({ open, onClose, children, title, sub }) {
   if (!open) return null;
   return (
-    <div className="scrim" onClick={onClose}>
-      <div className="sheet" onClick={e => e.stopPropagation()}>
-        <div className="sheet-grab" />
-        {title && <div className="sheet-title">{title}</div>}
-        {sub && <div className="sheet-sub">{sub}</div>}
-        {children}
+    <Overlay>
+      <div className="scrim" onClick={onClose}>
+        <div className="sheet" onClick={e => e.stopPropagation()}>
+          <div className="sheet-grab" />
+          {title && <div className="sheet-title">{title}</div>}
+          {sub && <div className="sheet-sub">{sub}</div>}
+          {children}
+        </div>
       </div>
-    </div>
+    </Overlay>
   );
 }
 
@@ -82,9 +91,11 @@ function Sheet({ open, onClose, children, title, sub }) {
 function Dialog({ open, onClose, children }) {
   if (!open) return null;
   return (
-    <div className="scrim center" onClick={onClose}>
-      <div className="dialog" onClick={e => e.stopPropagation()}>{children}</div>
-    </div>
+    <Overlay>
+      <div className="scrim center" onClick={onClose}>
+        <div className="dialog" onClick={e => e.stopPropagation()}>{children}</div>
+      </div>
+    </Overlay>
   );
 }
 

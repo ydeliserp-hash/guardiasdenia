@@ -359,6 +359,7 @@ function Phone() {
       <div className="frame-body">
         {booting ? <Cargando /> : authed ? <AppMain /> : <AuthScreen />}
       </div>
+      <div id="overlay-root" />
     </div>
   );
 }
@@ -459,6 +460,7 @@ function Desktop() {
         </div>
       </main>
       <Toast />
+      <div id="overlay-root" />
     </div>
   );
 }
