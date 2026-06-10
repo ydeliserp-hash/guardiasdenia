@@ -192,3 +192,9 @@
 }
 .ct-chip b { font-size: 10.5px; font-weight: 800; }
 .ct-empty { font-size: 12.5px; color: var(--text-faint); font-style: italic; }
+
+/* ---------- Móvil: iniciales de residentes un poco más grandes ---------- */
+.app-root.mobile-full .fill-1 .ini { font-size: 15px; }
+.app-root.mobile-full .tri-ini { font-size: 12px; }
+.app-root.mobile-full .half span { font-size: 13px; }
+.app-root.mobile-full .cell.corners-mode .corner-pill { font-size: 12px; }
