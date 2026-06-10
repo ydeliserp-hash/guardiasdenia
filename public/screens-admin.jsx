@@ -124,9 +124,21 @@ function AdminScreen() {
           </div>
           <div className="mini-note" style={{ marginTop: 8 }}>Los colores en uso aparecen deshabilitados.</div>
         </div>
-        <button className="btn btn-primary" style={{ marginTop: 8 }} disabled={saving} onClick={save}>
-          {saving ? 'Creando…' : 'Crear usuario'}
-        </button>
+        {/* Botón final siempre visible (fijo al pie de la hoja), activo al completar los datos */}
+        <div style={{
+          position: 'sticky', bottom: 0, margin: '14px -18px 0', padding: '12px 18px 4px',
+          background: 'var(--surface)', boxShadow: '0 -10px 14px -12px rgba(0,0,0,0.25)',
+        }}>
+          <button className="btn btn-primary" style={{ width: '100%' }}
+            disabled={saving || !(f.nombre.trim() && f.dni.trim() && f.color)} onClick={save}>
+            <Icon name="check" size={17} /> {saving ? 'Creando…' : 'Aceptar'}
+          </button>
+          {!(f.nombre.trim() && f.dni.trim() && f.color) && (
+            <div className="mini-note" style={{ textAlign: 'center', marginTop: 6 }}>
+              Completa nombre, DNI y color para continuar.
+            </div>
+          )}
+        </div>
       </Sheet>
 
       {/* Código de activación del usuario recién creado */}
