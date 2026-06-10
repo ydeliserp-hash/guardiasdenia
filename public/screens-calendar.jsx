@@ -15,6 +15,7 @@ function DayCell({ day, ids, dow, isToday, treatment, onClick }) {
   const cls = ['cell'];
   if (we) cls.push('we');
   if (ub && treatment === 'fichas') cls.push('fichas-mode');
+  if (ua && !ua.color) cls.push('ghost-top'); // histórico sin color bajo el número
   if (isToday) cls.push('today');
   if (!ua) cls.push('empty-day');
 

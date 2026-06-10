@@ -216,3 +216,6 @@
 
 /* Modo fichas: el número del día va sobre el fondo de la celda → color del tema */
 .cell.fichas-mode .daynum { color: var(--text); }
+
+/* número del día con color del tema cuando descansa sobre gris (históricos) */
+.cell.ghost-top .daynum { color: var(--text); }
