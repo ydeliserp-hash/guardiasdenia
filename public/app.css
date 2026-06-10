@@ -157,7 +157,7 @@
 }
 .auth-top { text-align: center; margin: 22px 0 26px; }
 .auth-logo {
-  height: 84px; background: #fff; padding: 14px 22px; border-radius: 18px;
+  height: 110px; background: #fff; padding: 16px 24px; border-radius: 22px;
   box-shadow: var(--shadow-sm); margin-bottom: 20px;
 }
 .auth-h1 { font-size: 23px; font-weight: 800; letter-spacing: -0.5px; margin: 0; }
