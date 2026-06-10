@@ -89,7 +89,7 @@ function ProfileScreen() {
         <div className="prof-dni">DNI {current.dni}</div>
       </div>
 
-      {s && (
+      {s && current.guardias && (
         <div className="card" style={{ padding: 16, marginTop: 12 }}>
           <div className="section-label" style={{ margin: '0 0 12px' }}>Tus guardias en {GD.YEAR}</div>
           <div className="prof-stats">

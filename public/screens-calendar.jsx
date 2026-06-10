@@ -151,8 +151,8 @@ function CalendarScreen() {
         <div className="empty">No hay guardias publicadas para este mes.</div>
       )}
 
-      {/* Tus guardias de este mes */}
-      {hayGuardias && !(isStaff && editMode) && (
+      {/* Tus guardias de este mes — solo para quien hace guardias */}
+      {hayGuardias && current.guardias && !(isStaff && editMode) && (
         <div className="card mine-card">
           <div className="section-label" style={{ margin: '0 0 10px' }}>Tus guardias · {GD.MONTHS[m]} <span className="mine-count">{myDays.length}</span></div>
           {myDays.length === 0
