@@ -7,8 +7,9 @@ const DOW_FULL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado
 
 function DayCell({ day, ids, dow, isToday, treatment, onClick }) {
   const we = dow >= 4; // Vie/Sáb/Dom
-  const ua = ids[0] ? GD.byId[ids[0]] : null;
-  const ub = ids[1] ? GD.byId[ids[1]] : null;
+  const desconocido = (id) => ({ id, nombre: 'Residente', ini: '·', color: null, anio: '' });
+  const ua = ids[0] ? (GD.byId[ids[0]] || desconocido(ids[0])) : null;
+  const ub = ids[1] ? (GD.byId[ids[1]] || desconocido(ids[1])) : null;
   const cls = ['cell'];
   if (we) cls.push('we');
   if (isToday) cls.push('today');

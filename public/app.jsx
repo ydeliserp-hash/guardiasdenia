@@ -148,10 +148,10 @@ function AppProvider({ children }) {
 
   const refrescar = useCallback(async () => {
     await Promise.all([
-      syncSolicitudes(), syncNotis(), syncStats(),
+      syncUsers(), syncSolicitudes(), syncNotis(), syncStats(),
       loadMonth(calYRef.current.y, calYRef.current.m),
     ]);
-  }, [syncSolicitudes, syncNotis, syncStats, loadMonth]);
+  }, [syncUsers, syncSolicitudes, syncNotis, syncStats, loadMonth]);
 
   /* ---- sesión ---- */
   const loginOk = useCallback(async (user) => {
@@ -193,6 +193,7 @@ function AppProvider({ children }) {
     const t = setInterval(() => {
       syncNotis().catch(() => {});
       syncSolicitudes().catch(() => {});
+      syncUsers().catch(() => {});
     }, 60000);
     return () => clearInterval(t);
   }, [authed, syncNotis, syncSolicitudes]);
