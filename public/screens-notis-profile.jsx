@@ -100,21 +100,27 @@ function PushToggle() {
   }
 
   async function activar() {
+    setEstado('on'); // el interruptor responde al toque; lo técnico sigue detrás
     try {
       const permiso = await Notification.requestPermission();
-      if (permiso !== 'granted') { showToast('Permiso de notificaciones denegado', 'warn'); return; }
+      if (permiso !== 'granted') {
+        setEstado('off');
+        showToast('Permiso de notificaciones denegado', 'warn');
+        return;
+      }
       const reg = await navigator.serviceWorker.register('sw.js');
       const { publicKey } = await API.pushClave();
       const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(publicKey) });
       await API.pushSuscribir(sub.toJSON());
-      setEstado('on');
       showToast('Notificaciones push activadas en este dispositivo');
     } catch (e) {
+      setEstado('off');
       showToast('No se pudo activar: ' + e.message, 'err');
     }
   }
 
   async function desactivar() {
+    setEstado('off'); // respuesta inmediata al toque
     try {
       const reg = await navigator.serviceWorker.register('sw.js');
       const sub = await reg.pushManager.getSubscription();
@@ -122,7 +128,6 @@ function PushToggle() {
         await API.pushBaja(sub.endpoint).catch(() => {});
         await sub.unsubscribe();
       }
-      setEstado('off');
       showToast('Notificaciones push desactivadas', 'warn');
     } catch (e) {
       showToast(e.message, 'err');
