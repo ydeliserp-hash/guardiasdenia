@@ -23,6 +23,14 @@ function createApp() {
   }));
   app.use(express.json());
 
+  // Portada informativa (la raíz no es parte de la API).
+  app.get('/', (_req, res) => res.json({
+    servicio: 'API de Guardias de Residentes — Hospital U. de Dénia',
+    estado: 'en funcionamiento',
+    nota: 'Esto es la API (el motor de datos). La aplicación visual es el frontend, que se conecta a estas rutas.',
+    rutas_principales: ['/salud', '/auth/login', '/guardias?anio=&mes=', '/solicitudes', '/notificaciones', '/estadisticas?anio='],
+  }));
+
   // Salud del servicio.
   app.get('/salud', (_req, res) => res.json({ ok: true, servicio: 'guardias-residentes-api', entorno: env.nodeEnv }));
 
