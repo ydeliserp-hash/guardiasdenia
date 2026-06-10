@@ -67,7 +67,7 @@ function CalendarScreen() {
 
   const shifts = schedule;
   const hayGuardias = Object.keys(shifts).length > 0;
-  const treat = ['diagonal', 'seam', 'split'].includes(calTreatment) ? calTreatment : 'diagonal';
+  const treat = ['diagonal', 'corners', 'split'].includes(calTreatment) ? calTreatment : 'diagonal';
 
   const first = new Date(y, m, 1);
   const lead = (first.getDay() + 6) % 7; // Monday-based offset

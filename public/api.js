@@ -79,5 +79,10 @@
     altaUsuario: (body) => call('/usuarios', { method: 'POST', body }),
     editarUsuario: (id, body) => call('/usuarios/' + id, { method: 'PATCH', body }),
     bajaUsuario: (id) => call('/usuarios/' + id, { method: 'DELETE' }),
+
+    // --- Notificaciones push ---
+    pushClave: () => call('/push/clave-publica'),
+    pushSuscribir: (sub) => call('/push/suscribir', { method: 'POST', body: sub }),
+    pushBaja: (endpoint) => call('/push/baja', { method: 'POST', body: { endpoint } }),
   };
 })();

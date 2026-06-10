@@ -12,6 +12,7 @@ const { isValidISODate, shortLabel, toISODate } = require('../utils/dates');
 const { serializeRequest, serializeAudit } = require('../utils/serialize');
 const { registrarAuditoria } = require('../services/audit');
 const { crearNotificacion, notificarTutores } = require('../services/notifications');
+const { enviarPush, enviarPushTutores } = require('../services/push');
 const {
   prepararCreacion, ejecutarCambio, validarReglas, getUser,
 } = require('../services/changeRequests');
@@ -138,6 +139,15 @@ router.post(
       return request;
     });
 
+    // Push al compañero destino (fuera de la transacción; nunca bloquea).
+    await enviarPush(aUserId, {
+      titulo: `${req.user.nombre} te propone ${tipo === 'intercambio' ? 'un intercambio' : 'una cesión'}`,
+      cuerpo: tipo === 'intercambio'
+        ? `Su guardia del ${shortLabel(guardiaDe)} por la tuya del ${shortLabel(guardiaA)}.`
+        : `Te cede la guardia del ${shortLabel(guardiaDe)}.`,
+      url: '/',
+    });
+
     res.status(201).json(serializeRequest(creada));
   }),
 );
@@ -198,6 +208,18 @@ router.post(
       return actualizado;
     });
 
+    // Push al solicitante y a los tutores (cola de aprobación).
+    await enviarPush(out.de_user_id, {
+      titulo: `${req.user.nombre} aceptó tu solicitud`,
+      cuerpo: 'Queda pendiente de la aprobación del tutor.',
+      url: '/',
+    });
+    await enviarPushTutores({
+      titulo: 'Solicitud pendiente de aprobación',
+      cuerpo: 'Hay un cambio aceptado por el compañero, pendiente de tu aprobación.',
+      url: '/',
+    });
+
     res.json(serializeRequest(out));
   }),
 );
@@ -252,6 +274,13 @@ router.post(
       });
 
       return rows[0];
+    });
+
+    // Push al solicitante con el rechazo.
+    await enviarPush(out.de_user_id, {
+      titulo: 'Tu solicitud ha sido rechazada',
+      cuerpo: out.motivo ? `Motivo: ${out.motivo}` : 'Solicitud rechazada.',
+      url: '/',
     });
 
     res.json(serializeRequest(out));
@@ -321,6 +350,15 @@ router.post(
       return actualizado;
     });
 
+    // Push a ambas partes: el cambio ya está aplicado en el calendario.
+    for (const uid of [out.de_user_id, out.a_user_id]) {
+      await enviarPush(uid, {
+        titulo: 'Cambio aprobado por la tutora',
+        cuerpo: 'El cambio ha sido aprobado y ya está aplicado en el calendario.',
+        url: '/',
+      });
+    }
+
     res.json(serializeRequest(out));
   }),
 );
@@ -366,6 +404,13 @@ router.post(
       });
 
       return rows[0];
+    });
+
+    // Push al compañero destino: la solicitud quedó cancelada.
+    await enviarPush(out.a_user_id, {
+      titulo: 'Solicitud cancelada',
+      cuerpo: `${req.user.nombre} ha cancelado la solicitud.`,
+      url: '/',
     });
 
     res.json(serializeRequest(out));

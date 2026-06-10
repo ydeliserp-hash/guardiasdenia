@@ -64,6 +64,84 @@ function NotificationsScreen() {
 }
 window.NotificationsScreen = NotificationsScreen;
 
+/* ---------- Notificaciones push (toggle del Perfil) ---------- */
+function PushToggle() {
+  const { showToast } = useApp();
+  const soportado = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const [estado, setEstado] = useState('cargando'); // cargando | on | off | no-soportado
+
+  useEffect(() => {
+    (async () => {
+      if (!soportado) { setEstado('no-soportado'); return; }
+      try {
+        const reg = await navigator.serviceWorker.register('sw.js');
+        const sub = await reg.pushManager.getSubscription();
+        setEstado(sub ? 'on' : 'off');
+      } catch (e) {
+        setEstado('off');
+      }
+    })();
+  }, []); // eslint-disable-line
+
+  function b64ToU8(base64) {
+    const pad = '='.repeat((4 - (base64.length % 4)) % 4);
+    const b64 = (base64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(b64);
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+  }
+
+  async function activar() {
+    try {
+      const permiso = await Notification.requestPermission();
+      if (permiso !== 'granted') { showToast('Permiso de notificaciones denegado', 'warn'); return; }
+      const reg = await navigator.serviceWorker.register('sw.js');
+      const { publicKey } = await API.pushClave();
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(publicKey) });
+      await API.pushSuscribir(sub.toJSON());
+      setEstado('on');
+      showToast('Notificaciones push activadas en este dispositivo');
+    } catch (e) {
+      showToast('No se pudo activar: ' + e.message, 'err');
+    }
+  }
+
+  async function desactivar() {
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js');
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await API.pushBaja(sub.endpoint).catch(() => {});
+        await sub.unsubscribe();
+      }
+      setEstado('off');
+      showToast('Notificaciones push desactivadas', 'warn');
+    } catch (e) {
+      showToast(e.message, 'err');
+    }
+  }
+
+  if (estado === 'no-soportado') {
+    return (
+      <div className="set-block" style={{ padding: '12px 14px' }}>
+        <div className="set-label">Notificaciones push</div>
+        <div className="mini-note" style={{ marginTop: 4 }}>
+          En iPhone: añade primero la app a la pantalla de inicio (botón Compartir → "Añadir a pantalla de inicio") y activa las notificaciones desde la app instalada.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button className="set-row" disabled={estado === 'cargando'}
+      onClick={() => (estado === 'on' ? desactivar() : activar())}>
+      <Icon name="bell" size={20} />
+      <span>Notificaciones push</span>
+      <div className="set-toggle" data-on={estado === 'on'}><span /></div>
+    </button>
+  );
+}
+window.PushToggle = PushToggle;
+
 /* ---------- Perfil ---------- */
 function ProfileScreen() {
   const { current, theme, toggleTheme, calTreatment, setCalTreatment, logout } = useApp();
@@ -71,9 +149,22 @@ function ProfileScreen() {
 
   const treatments = [
     { id: 'diagonal', label: 'Diagonal', a: 'lucia', b: 'hugo' },
-    { id: 'seam', label: 'Con línea', a: 'lucia', b: 'hugo' },
+    { id: 'corners', label: 'Esquinas', a: 'lucia', b: 'hugo' },
     { id: 'split', label: 'Cuadros', a: 'lucia', b: 'hugo' },
   ];
+
+  // tipo de letra de la app (persistente)
+  const [fuente, setFuente] = useState(() => localStorage.getItem('gd_font') || 'inter');
+  const FUENTES = [
+    { id: 'inter', label: 'Inter' },
+    { id: 'sistema', label: 'Sistema' },
+    { id: 'nunito', label: 'Nunito' },
+  ];
+  function cambiarFuente(id) {
+    setFuente(id);
+    localStorage.setItem('gd_font', id);
+    applyFont(id);
+  }
 
   return (
     <div className="page-pad">
@@ -124,6 +215,22 @@ function ProfileScreen() {
             ))}
           </div>
         </div>
+        <div className="set-divider" />
+        <div className="set-block">
+          <div className="set-label">Tipo de letra</div>
+          <div className="seg">
+            {FUENTES.map(fu => (
+              <button key={fu.id} className={fuente === fu.id ? 'on' : ''}
+                style={{ fontFamily: ({ inter: "'Inter', sans-serif", sistema: 'system-ui, sans-serif', nunito: "'Nunito', sans-serif" })[fu.id] }}
+                onClick={() => cambiarFuente(fu.id)}>{fu.label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="section-label">Notificaciones</div>
+      <div className="card" style={{ padding: 4 }}>
+        <PushToggle />
       </div>
 
       <div className="section-label">Cuenta</div>

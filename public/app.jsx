@@ -25,6 +25,8 @@ const FONTS = {
 function applyFont(key) {
   document.documentElement.style.setProperty('--font', FONTS[key] || FONTS.inter);
 }
+// Aplica la letra guardada por el usuario al arrancar (Perfil → Apariencia).
+applyFont(localStorage.getItem('gd_font') || 'inter');
 
 const ACCENTS = {
   '#1E3A5F': { l: '#1E3A5F', l7: '#16304F', d: '#6FA8DC', d7: '#8FBEE8', rl: '30,58,95', rd: '111,168,220' },
@@ -451,7 +453,7 @@ function TweaksBridge() {
   useEffect(() => { if (t.cell && t.cell !== calTreatment) setCalTreatment(t.cell); }, []); // eslint-disable-line
   const cellOpts = [
     { value: 'diagonal', label: 'Diagonal' },
-    { value: 'seam', label: 'Línea' },
+    { value: 'corners', label: 'Esquinas' },
     { value: 'split', label: 'Cuadros' },
   ];
   const fontOpts = [

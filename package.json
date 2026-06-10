@@ -24,6 +24,7 @@
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.12.0",
     "pg-connection-string": "^2.13.0",
+    "web-push": "^3.6.7",
     "zod": "^3.23.8"
   }
 }
