@@ -71,16 +71,25 @@ function PushToggle() {
   const [estado, setEstado] = useState('cargando'); // cargando | on | off | no-soportado
 
   useEffect(() => {
+    let vivo = true;
     (async () => {
       if (!soportado) { setEstado('no-soportado'); return; }
       try {
-        const reg = await navigator.serviceWorker.register('sw.js');
-        const sub = await reg.pushManager.getSubscription();
-        setEstado(sub ? 'on' : 'off');
+        // con tope de tiempo: si iOS tarda en registrar el SW, el botón
+        // queda usable igualmente (activar() lo reintenta)
+        const sub = await Promise.race([
+          (async () => {
+            const reg = await navigator.serviceWorker.register('sw.js');
+            return reg.pushManager.getSubscription();
+          })(),
+          new Promise((res) => setTimeout(() => res(null), 2500)),
+        ]);
+        if (vivo) setEstado(sub ? 'on' : 'off');
       } catch (e) {
-        setEstado('off');
+        if (vivo) setEstado('off');
       }
     })();
+    return () => { vivo = false; };
   }, []); // eslint-disable-line
 
   function b64ToU8(base64) {
@@ -132,10 +141,10 @@ function PushToggle() {
   }
 
   return (
-    <button className="set-row" disabled={estado === 'cargando'}
+    <button className="set-row"
       onClick={() => (estado === 'on' ? desactivar() : activar())}>
       <Icon name="bell" size={20} />
-      <span>Notificaciones push</span>
+      <span>Notificaciones push{estado === 'cargando' ? ' · comprobando…' : ''}</span>
       <div className="set-toggle" data-on={estado === 'on'}><span /></div>
     </button>
   );

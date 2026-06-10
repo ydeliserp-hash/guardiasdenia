@@ -768,3 +768,7 @@
   -webkit-overflow-scrolling: touch; /* inercia de scroll en iOS */
   overscroll-behavior: contain;      /* el gesto no se escapa a la página de detrás */
 }
+
+/* ---------- Móvil: sin doble franja superior (la appbar ya cubre la zona segura) ---------- */
+.app-root.mobile-full { padding-top: 0; }
+.app-root.mobile-full .auth { padding-top: calc(env(safe-area-inset-top, 0px) + 24px); }
