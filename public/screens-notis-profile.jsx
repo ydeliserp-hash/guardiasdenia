@@ -84,7 +84,8 @@ function ProfileScreen() {
         <div className="prof-name">{current.trato}</div>
         <div className="prof-role">
           <span className="pill pill-blue">{current.role === 'tutor' ? 'Tutora' : current.role === 'r4' ? 'R4 · Admin' : current.role === 'externo' ? 'Externo' : 'Residente'}</span>
-          <span className="pill pill-muted">{current.anio}</span>
+          {/* el año solo aporta información a los residentes (R1–R3) */}
+          {current.role === 'residente' && <span className="pill pill-muted">{current.anio}</span>}
         </div>
         <div className="prof-dni">DNI {current.dni}</div>
       </div>
