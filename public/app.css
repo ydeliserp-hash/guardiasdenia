@@ -7,18 +7,18 @@
   --font: 'Inter', -apple-system, system-ui, sans-serif;
 
   /* Resident pastels — identical in both themes, always dark ink on top */
-  --p-rosa:      #FFD1DC;
-  --p-melocoton: #FFDAB9;
-  --p-amarillo:  #FDFD96;
-  --p-menta:     #B5EAD7;
-  --p-salvia:    #C7E9B0;
-  --p-cielo:     #AEC6CF;
-  --p-bebe:      #B5D8EB;
-  --p-lavanda:   #CBAACB;
-  --p-lila:      #E0BBE4;
-  --p-coral:     #FFB7B2;
-  --p-turquesa:  #A0E7E5;
-  --p-arena:     #EBDCA8;
+  --p-rosa:      #F995BE;
+  --p-melocoton: #FFAD5C;
+  --p-amarillo:  #FFD93D;
+  --p-menta:     #5BE3A8;
+  --p-salvia:    #B8D94A;
+  --p-cielo:     #56B8F0;
+  --p-bebe:      #93A9F2;
+  --p-lavanda:   #B28AF0;
+  --p-lila:      #E879D9;
+  --p-coral:     #FF7E6B;
+  --p-turquesa:  #3DD6CE;
+  --p-arena:     #D2A45F;
   --pastel-ink:  #1F2937;
 }
 
