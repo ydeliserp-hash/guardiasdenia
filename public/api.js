@@ -84,5 +84,14 @@
     pushClave: () => call('/push/clave-publica'),
     pushSuscribir: (sub) => call('/push/suscribir', { method: 'POST', body: sub }),
     pushBaja: (endpoint) => call('/push/baja', { method: 'POST', body: { endpoint } }),
+
+    // --- Otros ---
+    icalEnlace: () => call('/ical/enlace'),
+    auditoria: (filtros) => {
+      const q = Object.entries(filtros || {})
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
+      return call('/auditoria' + (q ? '?' + q : ''));
+    },
   };
 })();

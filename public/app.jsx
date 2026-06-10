@@ -56,7 +56,10 @@ function applyAccent(hex) {
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 function AppProvider({ children }) {
-  const [theme, setTheme] = useState('light');
+  // Tema: el guardado por el usuario o, si no, el del sistema (oscuro automático).
+  const [theme, setTheme] = useState(() =>
+    localStorage.getItem('gd_theme')
+    || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
   const [authed, setAuthed] = useState(false);
   const [booting, setBooting] = useState(true);
   const [current, setCurrent] = useState(null);
@@ -187,7 +190,11 @@ function AppProvider({ children }) {
   const go = useCallback((s) => { setScreen(prev => { setPrevScreen(prev); return s; }); }, []);
   const back = useCallback(() => setScreen(prevScreen || 'calendar'), [prevScreen]);
 
-  const toggleTheme = useCallback(() => setTheme(t => t === 'light' ? 'dark' : 'light'), []);
+  const toggleTheme = useCallback(() => setTheme(t => {
+    const nuevo = t === 'light' ? 'dark' : 'light';
+    localStorage.setItem('gd_theme', nuevo); // la elección manual manda sobre el sistema
+    return nuevo;
+  }), []);
 
   const unread = notis.filter(n => !n.leida).length;
   const markAllRead = useCallback(() => {
@@ -312,6 +319,7 @@ function ScreenBody() {
     case 'profile': return <ProfileScreen />;
     case 'admin': return <AdminScreen />;
     case 'notis': return <NotificationsScreen />;
+    case 'historial': return <HistorialScreen />;
     default: return <CalendarScreen />;
   }
 }

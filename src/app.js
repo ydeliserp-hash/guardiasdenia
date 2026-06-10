@@ -15,6 +15,8 @@ const notificacionesRoutes = require('./routes/notificaciones');
 const usuariosRoutes = require('./routes/usuarios');
 const auditoriaRoutes = require('./routes/auditoria');
 const pushRoutes = require('./routes/push');
+const tareasRoutes = require('./routes/tareas');
+const icalRoutes = require('./routes/ical');
 
 function createApp() {
   const app = express();
@@ -45,6 +47,8 @@ function createApp() {
   app.use('/usuarios', usuariosRoutes);
   app.use('/auditoria', auditoriaRoutes);
   app.use('/push', pushRoutes);
+  app.use('/tareas', tareasRoutes);
+  app.use('/ical', icalRoutes);
 
   // 404 + manejador de errores (siempre al final).
   app.use(notFound);

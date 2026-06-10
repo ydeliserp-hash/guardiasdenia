@@ -99,6 +99,20 @@ function CalendarScreen() {
   const dowFor = (d) => (new Date(y, m, d).getDay() + 6) % 7;
   const fechaLabel = (d) => `${GD.DOW[dowFor(d)]} ${d} ${GD.MONTHS[m]}`;
 
+  // Aviso al staff en la última semana del mes: el siguiente sigue sin publicar.
+  const [avisoProx, setAvisoProx] = useState(null); // {y, m} | null
+  useEffect(() => {
+    if (!isStaff) return;
+    const hoyD = new Date();
+    const diasMes = new Date(hoyD.getFullYear(), hoyD.getMonth() + 1, 0).getDate();
+    if (hoyD.getDate() < diasMes - 6) return;
+    const ny = hoyD.getMonth() === 11 ? hoyD.getFullYear() + 1 : hoyD.getFullYear();
+    const nm = (hoyD.getMonth() + 1) % 12;
+    API.plan(ny, nm + 1)
+      .then(p => { if (p.estado !== 'publicado') setAvisoProx({ y: ny, m: nm }); })
+      .catch(() => {});
+  }, [isStaff]); // eslint-disable-line
+
   // residents appearing this month, for the legend
   const presentIds = useMemo(() => {
     const s = new Set();
@@ -148,6 +162,18 @@ function CalendarScreen() {
           <span>{published ? 'Plan publicado' : 'Borrador · sin publicar'}</span>
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: 12, opacity: .85 }}>Toca un día para asignar</span>
+        </div>
+      )}
+
+      {avisoProx && !editMode && (
+        <div className="edit-banner draft" style={{ marginBottom: 10 }}>
+          <Icon name="warn" size={17} />
+          <span>{GD.MONTHS[avisoProx.m].charAt(0).toUpperCase() + GD.MONTHS[avisoProx.m].slice(1)} sigue sin publicar</span>
+          <div style={{ flex: 1 }} />
+          <button className="btn btn-primary btn-sm"
+            onClick={() => { setY(avisoProx.y); setM(avisoProx.m); setEditMode(true); setAvisoProx(null); }}>
+            Preparar
+          </button>
         </div>
       )}
 

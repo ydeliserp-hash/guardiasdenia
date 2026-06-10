@@ -11,7 +11,7 @@ const ROLES = [
 const ROLE_LABEL = { tutor: 'Tutor', r4: 'R4 · Admin', residente: 'Residente', externo: 'Externo' };
 
 function AdminScreen() {
-  const { users, syncUsers, setScreen, setEditMode, showToast, current } = useApp();
+  const { users, syncUsers, setScreen, setEditMode, showToast, current, go } = useApp();
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [created, setCreated] = useState(null); // usuario recién creado (con código de activación)
@@ -125,6 +125,15 @@ function AdminScreen() {
         <div style={{ flex: 1 }}>
           <div className="row-title">Editar plan de guardias</div>
           <div className="row-meta">Asignar residentes y publicar el mes</div>
+        </div>
+        <Icon name="chevR" size={18} style={{ color: 'var(--text-faint)' }} />
+      </button>
+
+      <button className="card admin-cta" onClick={() => go('historial')}>
+        <div className="admin-cta-icn"><Icon name="clock" size={20} /></div>
+        <div style={{ flex: 1 }}>
+          <div className="row-title">Histórico</div>
+          <div className="row-meta">Quién hizo qué y cuándo (auditoría)</div>
         </div>
         <Icon name="chevR" size={18} style={{ color: 'var(--text-faint)' }} />
       </button>
@@ -318,3 +327,118 @@ function AdminScreen() {
   );
 }
 window.AdminScreen = AdminScreen;
+
+/* ============================================================
+   Histórico (tutor / R4) — registro de auditoría inmutable
+   ============================================================ */
+const AUD_ACCION = {
+  creada: { label: 'Solicitud creada', icon: 'plus' },
+  aceptada: { label: 'Aceptada por el compañero', icon: 'check' },
+  aprobada: { label: 'Aprobada por el tutor', icon: 'check-circle' },
+  rechazada: { label: 'Rechazada', icon: 'x-circle' },
+  cancelada: { label: 'Cancelada', icon: 'close' },
+  publicada: { label: 'Planilla publicada', icon: 'calendar' },
+  borrador: { label: 'Planilla a borrador', icon: 'edit' },
+  alta_usuario: { label: 'Alta de usuario', icon: 'user' },
+  baja_usuario: { label: 'Baja de usuario', icon: 'user' },
+  editado_usuario: { label: 'Usuario editado', icon: 'edit' },
+  asignacion_guardia: { label: 'Guardia asignada', icon: 'calendar' },
+};
+const AUD_FILTROS = [
+  { id: '', label: 'Todo' },
+  { id: 'solicitud', label: 'Cambios' },
+  { id: 'planilla', label: 'Planillas' },
+  { id: 'usuario', label: 'Usuarios' },
+  { id: 'guardia', label: 'Guardias' },
+];
+
+function nombreDe(id) {
+  const u = GD.byId[id];
+  return u ? u.nombre : (id || '—');
+}
+
+function lineaDetalle(e) {
+  const d = e.detalle || {};
+  if (e.entidad === 'solicitud') {
+    const de = d.de || d.solicitante, a = d.a || d.companero;
+    const partes = [];
+    if (de && a) partes.push(`${nombreDe(de).split(' ')[0]} → ${nombreDe(a).split(' ')[0]}`);
+    if (d.guardia_de) partes.push(d.tipo === 'intercambio' && d.guardia_a ? 'intercambio' : 'cesión');
+    if (d.forzado_pese_a_exceso) partes.push('⚠️ forzado pese a exceso');
+    else if (d.flag_exceso) partes.push(`exceso de ${d.flag_exceso.tipo}`);
+    if (d.motivo) partes.push(`"${d.motivo}"`);
+    return partes.join(' · ');
+  }
+  if (e.entidad === 'planilla' && d.mes) return `${GD.MONTHS[d.mes - 1]} ${d.anio}`;
+  if (e.entidad === 'guardia' && d.fecha) {
+    const despues = (d.despues || []).map((x) => nombreDe(x).split(' ')[0]).join(' + ') || 'día vaciado';
+    return `${d.fecha} → ${despues}`;
+  }
+  if (e.entidad === 'usuario') return d.nombre || (d.cambios ? 'datos corregidos' : '');
+  return '';
+}
+
+function fechaCorta(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+    + ' · ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+}
+
+function HistorialScreen() {
+  const { back } = useApp();
+  const [filtro, setFiltro] = useState('');
+  const [items, setItems] = useState(null); // null = cargando
+
+  useEffect(() => {
+    let vivo = true;
+    setItems(null);
+    API.auditoria({ entidad: filtro || undefined, limit: 100 })
+      .then((rows) => { if (vivo) setItems(rows); })
+      .catch(() => { if (vivo) setItems([]); });
+    return () => { vivo = false; };
+  }, [filtro]);
+
+  return (
+    <div className="page-pad">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button className="auth-back" onClick={back} style={{ margin: 0 }}>
+          <Icon name="arrow-left" size={18} /> Volver
+        </button>
+      </div>
+      <h2 className="page-title" style={{ marginTop: 8 }}>Histórico</h2>
+      <p className="page-sub">Registro inmutable de toda la actividad: solicitudes, planillas, usuarios y guardias.</p>
+
+      <div className="seg" style={{ marginBottom: 14 }}>
+        {AUD_FILTROS.map(f => (
+          <button key={f.id} className={filtro === f.id ? 'on' : ''} onClick={() => setFiltro(f.id)}>{f.label}</button>
+        ))}
+      </div>
+
+      {items === null && <div className="empty">Cargando…</div>}
+      {items && items.length === 0 && <div className="empty">Sin actividad registrada en esta vista.</div>}
+      {items && items.length > 0 && (
+        <div className="noti-list">
+          {items.map(e => {
+            const meta = AUD_ACCION[e.accion] || { label: e.accion, icon: 'info' };
+            return (
+              <div key={e.id} className="noti" style={{ cursor: 'default' }}>
+                <div className="noti-icn" style={{ background: 'var(--accent-soft-2)', color: 'var(--accent)' }}>
+                  <Icon name={meta.icon} size={18} />
+                </div>
+                <div className="noti-main">
+                  <div className="noti-title">{meta.label}</div>
+                  <div className="noti-body">
+                    {lineaDetalle(e)}
+                    {e.actor_id ? ` — por ${nombreDe(e.actor_id).split(' ')[0]}` : ''}
+                  </div>
+                  <div className="noti-time">{fechaCorta(e.creado_en)}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+window.HistorialScreen = HistorialScreen;

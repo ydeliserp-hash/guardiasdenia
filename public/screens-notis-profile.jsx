@@ -156,6 +156,58 @@ function PushToggle() {
 }
 window.PushToggle = PushToggle;
 
+/* ---------- Sincronizar guardias con el calendario personal ---------- */
+function SyncCalendario() {
+  const { showToast } = useApp();
+  const [abierto, setAbierto] = useState(false);
+  const [enlace, setEnlace] = useState(null);
+
+  async function abrir() {
+    try {
+      const e = await API.icalEnlace();
+      setEnlace(e);
+      setAbierto(true);
+    } catch (ex) {
+      showToast(ex.message, 'err');
+    }
+  }
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(enlace.url);
+      showToast('Enlace copiado');
+    } catch (e) {
+      showToast('No se pudo copiar; mantén pulsado el enlace para copiarlo', 'warn');
+    }
+  }
+
+  return (<>
+    <button className="set-row" onClick={abrir}>
+      <Icon name="calendar" size={20} />
+      <span>Sincronizar con mi calendario</span>
+      <Icon name="chevR" size={18} style={{ marginLeft: 'auto', color: 'var(--text-faint)' }} />
+    </button>
+
+    <Dialog open={abierto} onClose={() => setAbierto(false)}>
+      {enlace && (<>
+        <h3 className="dlg-title">Tus guardias en tu calendario</h3>
+        <p className="dlg-text">Tus guardias publicadas aparecerán en el calendario del móvil y <b>se actualizarán solas</b> cuando haya cambios aprobados.</p>
+        <button className="btn btn-primary" onClick={() => { window.location.href = enlace.webcal; }}>
+          <Icon name="calendar" size={17} /> Añadir a mi calendario
+        </button>
+        <button className="btn btn-secondary" style={{ marginTop: 8 }} onClick={copiar}>
+          Copiar enlace (Google Calendar)
+        </button>
+        <p className="dlg-text" style={{ marginTop: 10, fontSize: 12 }}>
+          En iPhone, el botón abre Calendario para suscribirte. En Google Calendar: Ajustes → Añadir calendario → Desde URL → pega el enlace.
+        </p>
+        <button className="btn btn-ghost" style={{ marginTop: 4 }} onClick={() => setAbierto(false)}>Cerrar</button>
+      </>)}
+    </Dialog>
+  </>);
+}
+window.SyncCalendario = SyncCalendario;
+
 /* ---------- Perfil ---------- */
 function ProfileScreen() {
   const { current, theme, toggleTheme, calTreatment, setCalTreatment, logout } = useApp();
@@ -276,6 +328,13 @@ function ProfileScreen() {
       <div className="card" style={{ padding: 4 }}>
         <PushToggle />
       </div>
+
+      {current.guardias && (<>
+        <div className="section-label">Mi calendario</div>
+        <div className="card" style={{ padding: 4 }}>
+          <SyncCalendario />
+        </div>
+      </>)}
 
       <div className="section-label">Cuenta</div>
       <div className="card" style={{ padding: 4 }}>

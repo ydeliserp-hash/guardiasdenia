@@ -4,5 +4,8 @@
   "outputDirectory": "public",
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
+  ],
+  "crons": [
+    { "path": "/tareas/diarias", "schedule": "0 18 * * *" }
   ]
 }
