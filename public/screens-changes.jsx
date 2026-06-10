@@ -15,7 +15,8 @@ function RequestCard({ r }) {
   const [busy, setBusy] = useState(false);
   const [motivo, setMotivo] = useState('');
   const run = async (fn) => { setBusy(true); await fn(); setBusy(false); };
-  const ude = GD.byId[r.de], ua = GD.byId[r.a];
+  const fantasma = (id) => ({ id, nombre: '(baja)', ini: '·', color: null, anio: '' });
+  const ude = GD.byId[r.de] || fantasma(r.de), ua = GD.byId[r.a] || fantasma(r.a);
   const tipoLabel = r.tipo === 'intercambio' ? 'Intercambio' : 'Cesión';
   const iAmRecipient = r.a === current.id && r.status === 'pend_companero';
   const iApprove = isTutor && r.status === 'pend_tutor';

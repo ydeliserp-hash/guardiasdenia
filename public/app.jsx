@@ -323,6 +323,31 @@ function Toast() {
   );
 }
 
+/* ---------- Red de seguridad: un error de pantalla nunca deja la app en blanco ---------- */
+class Guardian extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error('Error de pantalla:', error, info); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="page-pad" style={{ paddingTop: 48, textAlign: 'center' }}>
+          <h2 className="page-title">Vaya, algo ha fallado</h2>
+          <p className="page-sub">Se ha producido un error en esta pantalla. Tus datos están a salvo.</p>
+          <button className="btn btn-primary" style={{ marginTop: 10 }}
+            onClick={() => { this.setState({ error: null }); this.props.onReset && this.props.onReset(); }}>
+            Volver al calendario
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 /* ---------- Routed screen body ---------- */
 function ScreenBody() {
   const { screen } = useApp();
@@ -340,13 +365,15 @@ function ScreenBody() {
 
 /* ---------- Authenticated app frame ---------- */
 function AppMain() {
-  const { screen } = useApp();
+  const { screen, setScreen } = useApp();
   const noChrome = screen === 'notis'; // notis renders its own header
   return (
     <div className="scr">
       {!noChrome && <AppBar />}
       <div className="scr-body">
-        <ScreenBody />
+        <Guardian onReset={() => setScreen('calendar')}>
+          <ScreenBody />
+        </Guardian>
       </div>
       {!noChrome && <BottomNav />}
       <Toast />
@@ -469,7 +496,9 @@ function Desktop() {
       <main className="dk-main">
         <div className="dk-scroll">
           <div className="dk-content">
-            <ScreenBody />
+            <Guardian onReset={() => { /* vuelve al calendario */ window.location.hash = ''; }}>
+              <ScreenBody />
+            </Guardian>
           </div>
         </div>
       </main>

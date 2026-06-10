@@ -276,7 +276,7 @@ function CalendarScreen() {
         title={open ? fechaLabel(open) : ''}
         sub={openIds.length ? `${openIds.length} residente${openIds.length > 1 ? 's' : ''} de guardia` : 'Sin guardia asignada'}>
         {openIds.map(id => {
-          const u = GD.byId[id];
+          const u = GD.byId[id] || { id, nombre: 'Residente dado de baja', ini: '·', color: null, anio: '', role: 'residente' };
           return (
             <div key={id} className="detail-res">
               <Avatar user={u} size={42} />

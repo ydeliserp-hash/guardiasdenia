@@ -79,7 +79,9 @@ router.get(
       const { rows } = await query('SELECT * FROM users ORDER BY activo DESC, nombre ASC');
       return res.json(rows.map((u) => serializeUser(u, { incluirCodigo: true })));
     }
-    const { rows } = await query('SELECT * FROM users WHERE activo = TRUE ORDER BY nombre ASC');
+    // También los inactivos (sin DNI): guardias y solicitudes antiguas pueden
+    // referenciarlos y el calendario debe poder pintarlos siempre.
+    const { rows } = await query('SELECT * FROM users ORDER BY activo DESC, nombre ASC');
     res.json(rows.map((u) => {
       const pub = serializeUser(u);
       delete pub.dni;
