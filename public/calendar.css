@@ -1,0 +1,194 @@
+/* ============================================================
+   Calendar grid + the diagonal two-resident cell (3 treatments)
+   ============================================================ */
+
+.cal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.cal-month { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; text-transform: capitalize; }
+.cal-nav { display: flex; gap: 8px; }
+.cal-navbtn {
+  width: 40px; height: 40px; border-radius: 11px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.cal-navbtn:hover { background: var(--surface-2); }
+
+.dow {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 6px;
+}
+.dow div {
+  text-align: center; font-size: 11px; font-weight: 700;
+  color: var(--text-faint); text-transform: uppercase; letter-spacing: .4px;
+  padding: 4px 0;
+}
+.dow div.we { color: var(--accent); opacity: .85; }
+
+.grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+/* a single day cell */
+.cell {
+  position: relative;
+  aspect-ratio: 1 / 1.16;
+  border-radius: 11px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: transform .08s, box-shadow .15s;
+}
+.cell:active { transform: scale(0.96); }
+.cell.out { opacity: .35; pointer-events: none; }
+.cell.empty-day { background: var(--surface-2); }
+
+/* day number */
+.cell .daynum {
+  position: absolute; z-index: 4;
+  top: 4px; left: 5px;
+  font-size: 10px; font-weight: 700;
+  color: var(--pastel-ink);
+  line-height: 1;
+}
+.cell.empty-day .daynum { color: var(--text-muted); }
+/* weekend: shaded chip behind the number */
+.cell.we .daynum {
+  background: var(--weekend-shade);
+  padding: 1px 4px; border-radius: 6px;
+  top: 3px; left: 3px;
+}
+.cell.empty-day.we .daynum { color: var(--text); }
+
+.cell.today { box-shadow: 0 0 0 2px var(--accent); border-color: transparent; }
+
+/* single resident fill */
+.fill-1 { position: absolute; inset: 0; }
+.fill-1 .ini {
+  position: absolute; inset: 0;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 7px;
+  font-size: 13px; font-weight: 800; color: var(--pastel-ink);
+  letter-spacing: -0.3px;
+}
+
+/* mini diagonal cell used in legends / pickers */
+/* Triangle A = upper-left  : polygon(0 0, 100% 0, 0 100%)  */
+/* Triangle B = lower-right : polygon(100% 0, 100% 100%, 0 100%) */
+.tri { position: absolute; inset: 0; }
+.tri-a { clip-path: polygon(0 0, 100% 0, 0 100%); }
+.tri-b { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+
+.tri-ini {
+  position: absolute; z-index: 3;
+  font-size: 10px; font-weight: 800; color: var(--pastel-ink);
+  letter-spacing: -0.3px; line-height: 1;
+}
+.tri-ini.a { top: 5px; right: 5px; }      /* upper-right area of upper-left triangle */
+.tri-ini.b { bottom: 5px; left: 5px; }    /* lower-left area of lower-right triangle */
+
+/* Treatment: cuadros — two stacked halves */
+.half {
+  position: absolute; left: 0; right: 0; height: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.half-top { top: 0; }
+.half-bot { bottom: 0; }
+.half span {
+  font-size: 11px; font-weight: 800; color: var(--pastel-ink); letter-spacing: -0.3px;
+}
+.half-top span { transform: translateY(3px); }
+.half-bot span { transform: translateY(-2px); }
+
+/* Treatment 2: crisp white seam along the diagonal */
+.seam {
+  position: absolute; z-index: 2;
+  width: 200%; height: 2.5px;
+  background: var(--surface);
+  top: 50%; left: -50%;
+  transform-origin: center;
+}
+
+/* Treatment 3: "corners" — neutral cell, color only in the two triangle corners,
+   initials shown as small pills */
+.cell.corners-mode .tri-a { clip-path: polygon(0 0, 62% 0, 0 62%); }
+.cell.corners-mode .tri-b { clip-path: polygon(100% 38%, 100% 100%, 38% 100%); }
+.cell.corners-mode { background: var(--surface); }
+.cell.corners-mode .corner-pill {
+  position: absolute; z-index: 5;
+  font-size: 10.5px; font-weight: 800; color: var(--pastel-ink);
+  padding: 2px 6px; border-radius: 999px; line-height: 1.3;
+}
+.cell.corners-mode .corner-pill.a { top: 6px; right: 6px; }
+.cell.corners-mode .corner-pill.b { bottom: 6px; left: 6px; }
+.cell.corners-mode .daynum { color: var(--text); }
+
+/* mini diagonal cell used in legends / pickers */
+.mini-cell {
+  width: 30px; height: 30px; border-radius: 8px; overflow: hidden;
+  position: relative; flex-shrink: 0; border: 1px solid var(--border);
+}
+
+/* legend card */
+.legend-card { padding: 14px 16px; margin-top: 14px; }
+
+/* Day detail residents */
+.detail-res {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; border-radius: 14px; background: var(--surface-2);
+  margin-bottom: 8px;
+}
+
+/* edit-mode banner */
+.edit-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; border-radius: 13px;
+  margin-bottom: 14px;
+  font-size: 13px; font-weight: 600;
+}
+.edit-banner.draft { background: var(--amber-bg); color: var(--amber-text); }
+.edit-banner.pub { background: var(--green-bg); color: var(--green-text); }
+
+/* assign picker chips */
+.assign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.assign-chip {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  cursor: pointer; text-align: left; font-family: var(--font);
+  color: var(--text); min-height: 52px;
+}
+.assign-chip.on { border-color: var(--accent); background: var(--accent-soft); }
+.assign-chip .nm { font-size: 12.5px; font-weight: 600; line-height: 1.15; }
+.assign-chip .rl { font-size: 10.5px; color: var(--text-muted); }
+
+/* ---- calendar TABLE / agenda view ---- */
+.caltable { display: flex; flex-direction: column; gap: 4px; }
+.ctrow {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; text-align: left;
+  padding: 8px 10px; border-radius: 12px; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border);
+  font-family: var(--font); color: var(--text);
+}
+.ctrow.we { background: var(--surface-2); }
+.ctrow.today { box-shadow: 0 0 0 2px var(--accent); border-color: transparent; }
+.ct-date {
+  display: flex; flex-direction: column; align-items: center;
+  width: 38px; flex-shrink: 0; line-height: 1;
+}
+.ct-dow { font-size: 10px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: .3px; }
+.ctrow.we .ct-dow { color: var(--accent); }
+.ct-d { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; margin-top: 2px; }
+.ct-res { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 5px; }
+.ct-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 9px 4px 7px; border-radius: 99px;
+  font-size: 12px; font-weight: 600; color: var(--pastel-ink);
+}
+.ct-chip b { font-size: 10.5px; font-weight: 800; }
+.ct-empty { font-size: 12.5px; color: var(--text-faint); font-style: italic; }

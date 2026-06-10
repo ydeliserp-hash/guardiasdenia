@@ -61,14 +61,24 @@ async function colorOcupado(db, color, excluirId = null) {
   return rows.length > 0;
 }
 
-// GET /usuarios — lista (r4/tutor). Incluye activos e inactivos.
+// GET /usuarios — staff (r4/tutor) ve la lista completa (incl. código de
+// activación pendiente); el resto ve los campos públicos de los usuarios
+// activos (sin DNI), necesarios para pintar calendario y solicitudes.
 router.get(
   '/',
   requireAuth,
-  requireRole('r4', 'tutor'),
-  asyncHandler(async (_req, res) => {
-    const { rows } = await query('SELECT * FROM users ORDER BY activo DESC, nombre ASC');
-    res.json(rows.map((u) => serializeUser(u)));
+  asyncHandler(async (req, res) => {
+    const esStaff = ['r4', 'tutor'].includes(req.user.role);
+    if (esStaff) {
+      const { rows } = await query('SELECT * FROM users ORDER BY activo DESC, nombre ASC');
+      return res.json(rows.map((u) => serializeUser(u, { incluirCodigo: true })));
+    }
+    const { rows } = await query('SELECT * FROM users WHERE activo = TRUE ORDER BY nombre ASC');
+    res.json(rows.map((u) => {
+      const pub = serializeUser(u);
+      delete pub.dni;
+      return pub;
+    }));
   }),
 );
 

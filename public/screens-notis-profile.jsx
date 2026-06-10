@@ -1,0 +1,138 @@
+/* ============================================================
+   Notificaciones + Perfil
+   ============================================================ */
+
+const NOTI_ICON = { swap: 'swap', cal: 'calendar', clock: 'clock', check: 'check-circle', bell: 'bell' };
+const NOTI_TINT = { swap: 'var(--blue-bg)', cal: 'var(--accent-soft-2)', clock: 'var(--amber-bg)', check: 'var(--green-bg)', bell: 'var(--surface-3)' };
+const NOTI_FG = { swap: 'var(--blue-text)', cal: 'var(--accent)', clock: 'var(--amber-text)', check: 'var(--green-text)', bell: 'var(--text-muted)' };
+
+function NotificationsList() {
+  const { notis, markRead, go } = useApp();
+  return (
+    <div className="noti-list">
+      {notis.map(n => (
+        <button key={n.id} className={'noti' + (n.leida ? '' : ' unread')}
+          onClick={() => { markRead(n.id); if (n.ref) go('changes'); }}>
+          <div className="noti-icn" style={{ background: NOTI_TINT[n.icon], color: NOTI_FG[n.icon] }}>
+            <Icon name={NOTI_ICON[n.icon]} size={19} />
+          </div>
+          <div className="noti-main">
+            <div className="noti-title">{n.titulo}</div>
+            <div className="noti-body">{n.cuerpo}</div>
+            <div className="noti-time">{n.fecha}</div>
+          </div>
+          {!n.leida && <span className="noti-dot" />}
+        </button>
+      ))}
+    </div>
+  );
+}
+window.NotificationsList = NotificationsList;
+
+function NotificationsScreen() {
+  const { markAllRead, back, unread, isDesktop } = useApp();
+  if (isDesktop) {
+    return (
+      <div className="page-pad">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <div style={{ flex: 1 }}>
+            <h2 className="page-title">Notificaciones</h2>
+            <p className="page-sub" style={{ margin: 0 }}>{unread > 0 ? `${unread} sin leer` : 'Todo al día'}</p>
+          </div>
+          {unread > 0 && <button className="btn btn-secondary btn-sm" onClick={markAllRead}>Marcar leídas</button>}
+        </div>
+        <NotificationsList />
+      </div>
+    );
+  }
+  return (
+    <div className="scr">
+      <header className="appbar">
+        <button className="iconbtn" onClick={back} style={{ marginLeft: -8 }}><Icon name="arrow-left" size={22} /></button>
+        <div style={{ minWidth: 0 }}>
+          <h1 className="appbar-title">Notificaciones</h1>
+          <p className="appbar-sub">{unread > 0 ? `${unread} sin leer` : 'Todo al día'}</p>
+        </div>
+        <div className="appbar-spacer" />
+        {unread > 0 && <button className="btn btn-ghost btn-sm" onClick={markAllRead}>Marcar leídas</button>}
+      </header>
+      <div className="scr-body page-pad">
+        <NotificationsList />
+      </div>
+    </div>
+  );
+}
+window.NotificationsScreen = NotificationsScreen;
+
+/* ---------- Perfil ---------- */
+function ProfileScreen() {
+  const { current, theme, toggleTheme, calTreatment, setCalTreatment, logout } = useApp();
+  const s = (GD.STATS[GD.YEAR] || {})[current.id];
+
+  const treatments = [
+    { id: 'diagonal', label: 'Diagonal', a: 'lucia', b: 'hugo' },
+    { id: 'seam', label: 'Con línea', a: 'lucia', b: 'hugo' },
+    { id: 'split', label: 'Cuadros', a: 'lucia', b: 'hugo' },
+  ];
+
+  return (
+    <div className="page-pad">
+      <h2 className="page-title">Perfil</h2>
+
+      <div className="card prof-card">
+        <div className="prof-avatar"><Avatar user={current} size={64} /></div>
+        <div className="prof-name">{current.trato}</div>
+        <div className="prof-role">
+          <span className="pill pill-blue">{current.role === 'tutor' ? 'Tutora' : current.role === 'r4' ? 'R4 · Admin' : current.role === 'externo' ? 'Externo' : 'Residente'}</span>
+          <span className="pill pill-muted">{current.anio}</span>
+        </div>
+        <div className="prof-dni">DNI {current.dni}</div>
+      </div>
+
+      {s && (
+        <div className="card" style={{ padding: 16, marginTop: 12 }}>
+          <div className="section-label" style={{ margin: '0 0 12px' }}>Tus guardias en {GD.YEAR}</div>
+          <div className="prof-stats">
+            <div><b>{s.mes}</b><span>este mes</span></div>
+            <div><b>{s.anio}</b><span>en el año</span></div>
+            <div><b>{s.vi}</b><span>viernes</span></div>
+            <div><b>{s.sa}</b><span>sábados</span></div>
+            <div><b>{s.do}</b><span>domingos</span></div>
+          </div>
+        </div>
+      )}
+
+      <div className="section-label">Apariencia</div>
+      <div className="card" style={{ padding: 4 }}>
+        <button className="set-row" onClick={toggleTheme}>
+          <Icon name={theme === 'light' ? 'sun' : 'moon'} size={20} />
+          <span>Tema {theme === 'light' ? 'claro' : 'oscuro'}</span>
+          <div className="set-toggle" data-on={theme === 'dark'}><span /></div>
+        </button>
+        <div className="set-divider" />
+        <div className="set-block">
+          <div className="set-label">Vista de calendario</div>
+          <div className="treat-row">
+            {treatments.map(t => (
+              <button key={t.id} className={'treat' + (calTreatment === t.id ? ' on' : '')} onClick={() => setCalTreatment(t.id)}>
+                {t.id === 'split'
+                  ? <span className="treat-split-ico"><i style={{ background: GD.pastel(GD.byId[t.a]) }} /><i style={{ background: GD.pastel(GD.byId[t.b]) }} /></span>
+                  : <MiniCell a={t.a} b={t.b} mode={t.id} size={42} />}
+                <span>{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="section-label">Cuenta</div>
+      <div className="card" style={{ padding: 4 }}>
+        <button className="set-row danger" onClick={logout}>
+          <Icon name="logout" size={20} />
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+window.ProfileScreen = ProfileScreen;
