@@ -54,7 +54,8 @@ const env = {
   // Token compartido para el enlace público de SOLO LECTURA (/publico/guardias),
   // que la app de turnos de Anestesia usa para mostrar el residente de guardia de
   // cada día. Si no se define, el enlace público queda DESACTIVADO (devuelve 401).
-  feedToken: process.env.FEED_TOKEN || null,
+  // .trim() para tolerar un salto de línea / espacio al pegar el valor en el panel.
+  feedToken: (process.env.FEED_TOKEN || '').trim() || null,
 };
 
 module.exports = env;

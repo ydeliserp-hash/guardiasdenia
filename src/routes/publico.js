@@ -31,10 +31,9 @@ const anioMesQuery = z.object({
   mes: z.coerce.number().int().min(1).max(12),
 });
 
-/** Token compartido en cabecera (x-feed-token) o query (?token=), comparado en tiempo constante. */
-function tokenValido(req) {
-  if (!env.feedToken) return false; // sin token configurado, el enlace queda cerrado
-  const dado = String(req.get('x-feed-token') || req.query.token || '');
+/** Compara el token dado con el configurado, en tiempo constante (tolera espacios al pegar). */
+function tokenCoincide(req) {
+  const dado = String(req.get('x-feed-token') || req.query.token || '').trim();
   const a = Buffer.from(dado);
   const b = Buffer.from(env.feedToken);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
@@ -45,7 +44,9 @@ router.get(
   '/guardias',
   validate(anioMesQuery, 'query'),
   asyncHandler(async (req, res) => {
-    if (!tokenValido(req)) throw errores.noAutorizado('Token de acceso inválido.');
+    // Mensajes distintos para poder diagnosticar: falta de configuración vs token incorrecto.
+    if (!env.feedToken) throw errores.noAutorizado('El enlace público no está configurado en el servidor (falta FEED_TOKEN o no se ha redeployado).');
+    if (!tokenCoincide(req)) throw errores.noAutorizado('Token de acceso inválido (no coincide con el del servidor).');
     const { anio, mes } = req.query;
 
     // Solo se expone lo PUBLICADO. Si el mes está en borrador (o no existe), va vacío.
