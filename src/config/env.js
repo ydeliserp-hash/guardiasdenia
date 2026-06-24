@@ -50,6 +50,11 @@ const env = {
   jwtTempExpiresIn: process.env.JWT_TEMP_EXPIRES_IN || '15m',
 
   seedPassword: process.env.SEED_PASSWORD || 'Denia2026!',
+
+  // Token compartido para el enlace público de SOLO LECTURA (/publico/guardias),
+  // que la app de turnos de Anestesia usa para mostrar el residente de guardia de
+  // cada día. Si no se define, el enlace público queda DESACTIVADO (devuelve 401).
+  feedToken: process.env.FEED_TOKEN || null,
 };
 
 module.exports = env;

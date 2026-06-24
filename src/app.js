@@ -18,6 +18,7 @@ const pushRoutes = require('./routes/push');
 const tareasRoutes = require('./routes/tareas');
 const icalRoutes = require('./routes/ical');
 const guardiasExternasRoutes = require('./routes/guardiasExternas');
+const publicoRoutes = require('./routes/publico');
 
 function createApp() {
   const app = express();
@@ -51,6 +52,7 @@ function createApp() {
   app.use('/tareas', tareasRoutes);
   app.use('/ical', icalRoutes);
   app.use('/guardias-externas', guardiasExternasRoutes);
+  app.use('/publico', publicoRoutes);
 
   // 404 + manejador de errores (siempre al final).
   app.use(notFound);
