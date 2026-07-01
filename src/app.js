@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 
 const env = require('./config/env');
+const { query } = require('./config/db');
 const { notFound, errorHandler } = require('./middleware/error');
 
 const authRoutes = require('./routes/auth');
@@ -36,8 +37,21 @@ function createApp() {
     rutas_principales: ['/salud', '/auth/login', '/guardias?anio=&mes=', '/solicitudes', '/notificaciones', '/estadisticas?anio='],
   }));
 
-  // Salud del servicio.
+  // Salud del servicio (sin tocar la base de datos).
   app.get('/salud', (_req, res) => res.json({ ok: true, servicio: 'guardias-residentes-api', entorno: env.nodeEnv }));
+
+  // Latido con acceso a la BD: un servicio de cron externo (p. ej. cron-job.org)
+  // llama aquí periódicamente para que Supabase NO pause el proyecto por
+  // inactividad. Hace una consulta mínima real, que es lo que cuenta como
+  // actividad de base de datos.
+  app.get('/salud/db', async (_req, res) => {
+    try {
+      await query('SELECT 1');
+      res.json({ ok: true, db: 'activa' });
+    } catch (e) {
+      res.status(503).json({ ok: false, db: 'sin_conexion' });
+    }
+  });
 
   // Rutas de la API.
   app.use('/auth', authRoutes);
